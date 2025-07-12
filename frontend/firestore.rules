@@ -1,0 +1,56 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper function to check for admin role
+    function isAdmin() {
+      return request.auth.token.admin == true;
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      // Admins can do anything. Users can read their own data.
+      allow read: if isAdmin() || request.auth.uid == userId;
+      allow create: if isAdmin(); // Only admins can create users
+      allow update, delete: if isAdmin();
+    }
+    match /users {
+      // Only admins can list all users.
+      allow list: if isAdmin();
+    }
+
+    // Modules Collection
+    match /modules/{moduleId} {
+      // Authenticated users can read modules. Admins can write.
+      allow read: if request.auth.uid != null;
+      allow write: if isAdmin();
+    }
+    match /modules {
+        // Only admins can list all modules.
+        allow list: if isAdmin();
+    }
+
+    // Articles Collection
+    match /articles/{articleId} {
+      // Authenticated users can read articles. Admins can write.
+      allow read: if request.auth.uid != null;
+      allow write: if isAdmin();
+    }
+    match /articles {
+        // Only admins can list all articles.
+        allow list: if isAdmin();
+    }
+
+    // Scripts Collection
+    match /scripts/{scriptId} {
+      // Authenticated users can read scripts. Admins can write.
+      allow read: if request.auth.uid != null;
+      allow write: if isAdmin();
+    }
+    match /scripts {
+        // Only admins can list all scripts.
+        allow list: if isAdmin();
+    }
+  }
+}
