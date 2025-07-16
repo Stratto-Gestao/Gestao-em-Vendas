@@ -1,0 +1,13 @@
+Esta é uma planilha de exemplo para importação de dados históricos.
+
+Colunas necessárias:
+- Valor vendido mes: Valor total vendido no mês (número)
+- Valor faturado mes: Valor total faturado no mês (número)  
+- Mes: Número do mês (0-11, onde 0=Janeiro, 1=Fevereiro, etc.)
+- Ano: Ano de referência (número)
+
+Exemplo de dados:
+Valor vendido mes | Valor faturado mes | Mes | Ano
+50000            | 45000             | 0   | 2024
+60000            | 55000             | 1   | 2024
+40000            | 38000             | 2   | 2024

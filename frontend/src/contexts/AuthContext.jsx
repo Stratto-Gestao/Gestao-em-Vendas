@@ -28,10 +28,10 @@ export const AuthProvider = ({ children }) => {
     ADMIN_OPERACIONAL: ['dashboard', 'academia', 'gamificacao', 'vendedor', 'sdr', 'perfil', 'admin'],
     ADMIN_CONTEUDO: ['dashboard', 'academia', 'perfil', 'admin'],
     ADMIN_GAMIFICACAO: ['dashboard', 'academia', 'gamificacao', 'perfil', 'admin'],
-    USER_SDR: ['dashboard', 'academia', 'sdr', 'perfil', 'gamificacao'],
-    USER_VENDEDOR: ['dashboard', 'academia', 'vendedor', 'perfil', 'gamificacao'],
-    MR_RESPONSAVEL: ['dashboard', 'academia', 'perfil'],
-    USER: ['dashboard', 'perfil']
+    USER_SDR: ['academia', 'sdr', 'gamificacao'],
+    USER_VENDEDOR: ['academia', 'vendedor', 'gamificacao'],
+    MR_RESPONSAVEL: ['academia', 'mr-representacoes'],
+    USER: ['perfil']
   };
 
   // Verificar se o usuário tem uma role de admin (para UI e navegação)

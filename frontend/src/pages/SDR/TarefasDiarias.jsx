@@ -1,13 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import * as XLSX from 'xlsx';
+import { AuthContext } from '../../contexts/AuthContextDef';
 import { 
   Plus, CheckCircle, Clock, Target, Calendar, User, Filter, Search,
   MoreVertical, Edit, Trash2, AlertCircle, Star, Flag, TrendingUp,
   Play, Pause, RotateCcw, ArrowRight, Users, Phone, Mail, FileText,
-  ChevronDown, Eye, Copy, RefreshCw, Award, Zap, Timer, Activity
+  ChevronDown, Eye, Copy, RefreshCw, Award, Zap, Timer, Activity,
+  Save, X, Archive, History, Download
 } from 'lucide-react';
 
 function TarefasDiarias() {
-  const [tarefas, setTarefas] = useState([
+  // Contexto de autenticação
+  const { currentUser, userRole, canWrite } = useContext(AuthContext);
+  
+  // Verificar se o usuário é SUPER_ADMIN (única role com acesso total)
+  const isSuperAdmin = userRole === 'SUPER_ADMIN';
+  
+  // Dados iniciais (serão carregados do localStorage se existirem)
+  const tarefasIniciais = [
     {
       id: 1,
       titulo: 'Ligar para leads quentes',
@@ -22,7 +32,8 @@ function TarefasDiarias() {
       prazo: '2024-07-12T17:00:00',
       responsavel: 'Você',
       tags: ['vendas', 'follow-up'],
-      categoria: 'Prospecção'
+      categoria: 'Prospecção',
+      criadoPor: 'admin'
     },
     {
       id: 2,
@@ -38,7 +49,8 @@ function TarefasDiarias() {
       prazo: '2024-07-12T15:00:00',
       responsavel: 'Você',
       tags: ['qualificação', 'leads'],
-      categoria: 'Análise'
+      categoria: 'Análise',
+      criadoPor: 'admin'
     },
     {
       id: 3,
@@ -54,7 +66,8 @@ function TarefasDiarias() {
       prazo: '2024-07-12T14:00:00',
       responsavel: 'Você',
       tags: ['proposta', 'cliente'],
-      categoria: 'Vendas'
+      categoria: 'Vendas',
+      criadoPor: 'admin'
     },
     {
       id: 4,
@@ -70,42 +83,78 @@ function TarefasDiarias() {
       prazo: '2024-07-12T16:00:00',
       responsavel: 'Equipe',
       tags: ['reunião', 'alinhamento'],
-      categoria: 'Administrativo'
+      categoria: 'Administrativo',
+      criadoPor: 'admin'
     }
-  ]);
+  ];
 
-  const [historicoTarefas, setHistoricoTarefas] = useState([
-    {
-      id: 101,
-      titulo: 'Apresentação para GlobalCorp',
-      descricao: 'Demo do produto para tomadores de decisão',
-      status: 'Concluída',
-      tempoGasto: '1h 30min',
-      concluida: '2024-07-12T14:30:00',
-      resultado: 'Positivo - Agendar próxima reunião',
-      categoria: 'Vendas'
-    },
-    {
-      id: 102,
-      titulo: 'Follow-up email campaign',
-      descricao: 'Envio de 50 emails de follow-up personalizados',
-      status: 'Concluída',
-      tempoGasto: '45min',
-      concluida: '2024-07-12T12:15:00',
-      resultado: '12 respostas recebidas',
-      categoria: 'Marketing'
-    },
-    {
-      id: 103,
-      titulo: 'Atualização CRM',
-      descricao: 'Atualizar informações de 30 leads no sistema',
-      status: 'Concluída',
-      tempoGasto: '25min',
-      concluida: '2024-07-12T11:45:00',
-      resultado: 'CRM atualizado com sucesso',
-      categoria: 'Administrativo'
-    }
-  ]);
+  // Carregar dados do localStorage ou usar dados iniciais
+  const [tarefas, setTarefas] = useState(() => {
+    const savedTarefas = localStorage.getItem('tarefas');
+    return savedTarefas ? JSON.parse(savedTarefas) : tarefasIniciais;
+  });
+
+  const [historicoTarefas, setHistoricoTarefas] = useState(() => {
+    const savedHistorico = localStorage.getItem('historicoTarefas');
+    return savedHistorico ? JSON.parse(savedHistorico) : [
+      {
+        id: 101,
+        titulo: 'Apresentação para GlobalCorp',
+        descricao: 'Demo do produto para tomadores de decisão',
+        status: 'Concluída',
+        tempoGasto: '1h 30min',
+        concluida: '2024-07-12T14:30:00',
+        resultado: 'Positivo - Agendar próxima reunião',
+        categoria: 'Vendas'
+      },
+      {
+        id: 102,
+        titulo: 'Follow-up email campaign',
+        descricao: 'Envio de 50 emails de follow-up personalizados',
+        status: 'Concluída',
+        tempoGasto: '45min',
+        concluida: '2024-07-12T12:15:00',
+        resultado: '12 respostas recebidas',
+        categoria: 'Marketing'
+      },
+      {
+        id: 103,
+        titulo: 'Atualização CRM',
+        descricao: 'Atualizar informações de 30 leads no sistema',
+        status: 'Concluída',
+        tempoGasto: '25min',
+        concluida: '2024-07-12T11:45:00',
+        resultado: 'CRM atualizado com sucesso',
+        categoria: 'Administrativo'
+      }
+    ];
+  });
+
+  const [historicoSemana, setHistoricoSemana] = useState(() => {
+    const savedHistoricoSemana = localStorage.getItem('historicoSemana');
+    return savedHistoricoSemana ? JSON.parse(savedHistoricoSemana) : [
+      {
+        id: 201,
+        titulo: 'Negociação com MegaCorp',
+        descricao: 'Fechamento de contrato anual',
+        status: 'Concluída',
+        tempoGasto: '3h 20min',
+        concluida: '2024-07-10T16:45:00',
+        resultado: 'Contrato fechado - R$ 250.000',
+        categoria: 'Vendas'
+      },
+      {
+        id: 202,
+        titulo: 'Treinamento equipe',
+        descricao: 'Apresentação sobre novas funcionalidades',
+        status: 'Concluída',
+        tempoGasto: '2h',
+        concluida: '2024-07-09T14:00:00',
+        resultado: 'Equipe capacitada com sucesso',
+        categoria: 'Treinamento'
+      }
+    ];
+  });
 
   const [novaTarefa, setNovaTarefa] = useState({
     titulo: '',
@@ -117,11 +166,20 @@ function TarefasDiarias() {
     categoria: 'Prospecção'
   });
 
+  const [tarefaEditando, setTarefaEditando] = useState(null);
   const [showNewTaskModal, setShowNewTaskModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [showProblemModal, setShowProblemModal] = useState(false);
+  const [tarefaParaExcluir, setTarefaParaExcluir] = useState(null);
+  const [tarefaComProblema, setTarefaComProblema] = useState(null);
+  const [problemaDescricao, setProblemaDescricao] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [filtroStatus, setFiltroStatus] = useState('');
   const [filtroPrioridade, setFiltroPrioridade] = useState('');
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [timers, setTimers] = useState({});
 
   // Atualizar relógio
   useEffect(() => {
@@ -129,12 +187,65 @@ function TarefasDiarias() {
     return () => clearInterval(timer);
   }, []);
 
+  // Salvar dados no localStorage
+  useEffect(() => {
+    localStorage.setItem('tarefas', JSON.stringify(tarefas));
+  }, [tarefas]);
+
+  useEffect(() => {
+    localStorage.setItem('historicoTarefas', JSON.stringify(historicoTarefas));
+  }, [historicoTarefas]);
+
+  useEffect(() => {
+    localStorage.setItem('historicoSemana', JSON.stringify(historicoSemana));
+  }, [historicoSemana]);
+
+  // Gerenciar timers das tarefas
+  useEffect(() => {
+    const intervals = {};
+    
+    tarefas.forEach(tarefa => {
+      if (tarefa.status === 'Em andamento' && timers[tarefa.id]) {
+        intervals[tarefa.id] = setInterval(() => {
+          setTarefas(prev => prev.map(t => 
+            t.id === tarefa.id 
+              ? { ...t, tempoGasto: incrementarTempo(t.tempoGasto) }
+              : t
+          ));
+        }, 60000); // Atualiza a cada minuto
+      }
+    });
+
+    return () => {
+      Object.values(intervals).forEach(clearInterval);
+    };
+  }, [tarefas, timers]);
+
+  // Função para incrementar tempo
+  const incrementarTempo = (tempoAtual) => {
+    const regex = /(\d+)h?\s*(\d+)?min/;
+    const match = tempoAtual.match(regex);
+    
+    if (match) {
+      const horas = parseInt(match[1]) || 0;
+      const minutos = parseInt(match[2]) || 0;
+      const totalMinutos = horas * 60 + minutos + 1;
+      const novasHoras = Math.floor(totalMinutos / 60);
+      const novosMinutos = totalMinutos % 60;
+      
+      return novasHoras > 0 ? `${novasHoras}h ${novosMinutos}min` : `${novosMinutos}min`;
+    }
+    
+    return '1min';
+  };
+
   // Estatísticas calculadas
   const stats = {
     total: tarefas.length,
     concluidas: tarefas.filter(t => t.status === 'Concluída').length,
     emAndamento: tarefas.filter(t => t.status === 'Em andamento').length,
     pendentes: tarefas.filter(t => t.status === 'Pendente').length,
+    comProblema: tarefas.filter(t => t.status === 'Com Problema').length,
     atrasadas: tarefas.filter(t => new Date(t.prazo) < new Date() && t.status !== 'Concluída').length
   };
 
@@ -157,6 +268,7 @@ function TarefasDiarias() {
       case 'Em andamento': return 'text-blue-600 bg-blue-50 border-blue-200';
       case 'Pendente': return 'text-yellow-600 bg-yellow-50 border-yellow-200';
       case 'Agendada': return 'text-purple-600 bg-purple-50 border-purple-200';
+      case 'Com Problema': return 'text-red-600 bg-red-50 border-red-200';
       default: return 'text-gray-600 bg-gray-50 border-gray-200';
     }
   };
@@ -186,7 +298,8 @@ function TarefasDiarias() {
       tempoGasto: '0min',
       criadoEm: new Date().toISOString(),
       responsavel: 'Você',
-      tags: []
+      tags: [],
+      criadoPor: 'usuario' // Usuário comum cria tarefas
     };
     
     setTarefas([...tarefas, novaTask]);
@@ -202,12 +315,307 @@ function TarefasDiarias() {
     setShowNewTaskModal(false);
   };
 
-  const handleMarcarConcluida = (id) => {
-    setTarefas(tarefas.map(tarefa => 
-      tarefa.id === id 
-        ? { ...tarefa, status: 'Concluída', progresso: 100 }
-        : tarefa
+  const handleEditarTarefa = (tarefa) => {
+    setTarefaEditando(tarefa);
+    setShowEditModal(true);
+  };
+
+  const handleSalvarEdicao = (e) => {
+    e.preventDefault();
+    setTarefas(tarefas.map(t => 
+      t.id === tarefaEditando.id ? tarefaEditando : t
     ));
+    setTarefaEditando(null);
+    setShowEditModal(false);
+  };
+
+  const handleExcluirTarefa = (tarefa) => {
+    if (!isSuperAdmin) {
+      alert('Apenas SUPER_ADMIN pode excluir tarefas!');
+      return;
+    }
+    setTarefaParaExcluir(tarefa);
+    setShowDeleteModal(true);
+  };
+
+  const confirmarExclusao = () => {
+    if (!isSuperAdmin) {
+      alert('Apenas SUPER_ADMIN pode excluir tarefas!');
+      return;
+    }
+    setTarefas(tarefas.filter(t => t.id !== tarefaParaExcluir.id));
+    setTarefaParaExcluir(null);
+    setShowDeleteModal(false);
+  };
+
+  const handleMarcarConcluida = (id) => {
+    const tarefaConcluida = tarefas.find(t => t.id === id);
+    if (tarefaConcluida) {
+      // Adicionar ao histórico do dia
+      const novoHistorico = {
+        id: tarefaConcluida.id,
+        titulo: tarefaConcluida.titulo,
+        descricao: tarefaConcluida.descricao,
+        status: 'Concluída',
+        tempoGasto: tarefaConcluida.tempoGasto,
+        concluida: new Date().toISOString(),
+        resultado: 'Tarefa concluída com sucesso',
+        categoria: tarefaConcluida.categoria
+      };
+      
+      setHistoricoTarefas([novoHistorico, ...historicoTarefas]);
+      
+      // Atualizar tarefa
+      setTarefas(tarefas.map(tarefa => 
+        tarefa.id === id 
+          ? { ...tarefa, status: 'Concluída', progresso: 100 }
+          : tarefa
+      ));
+    }
+  };
+
+  const handleReportarProblema = (tarefa) => {
+    setTarefaComProblema(tarefa);
+    setShowProblemModal(true);
+  };
+
+  const handleSalvarProblema = () => {
+    if (tarefaComProblema && problemaDescricao.trim()) {
+      // Adicionar problema ao histórico
+      const problemaRegistrado = {
+        id: Date.now(),
+        titulo: `Problema: ${tarefaComProblema.titulo}`,
+        descricao: problemaDescricao,
+        status: 'Problema',
+        tempoGasto: '0min',
+        concluida: new Date().toISOString(),
+        resultado: `Problema reportado: ${problemaDescricao}`,
+        categoria: 'Problema'
+      };
+      
+      setHistoricoTarefas([problemaRegistrado, ...historicoTarefas]);
+      
+      // Marcar tarefa como com problema
+      setTarefas(tarefas.map(tarefa => 
+        tarefa.id === tarefaComProblema.id 
+          ? { ...tarefa, status: 'Com Problema', problema: problemaDescricao }
+          : tarefa
+      ));
+      
+      setProblemaDescricao('');
+      setTarefaComProblema(null);
+      setShowProblemModal(false);
+    }
+  };
+
+  const isTaskOverdue = (prazo, status) => {
+    if (status === 'Concluída') return false;
+    return new Date(prazo) < new Date();
+  };
+
+  const handleIniciarPausarTarefa = (id) => {
+    setTarefas(tarefas.map(tarefa => {
+      if (tarefa.id === id) {
+        const novoStatus = tarefa.status === 'Em andamento' ? 'Pendente' : 'Em andamento';
+        return { ...tarefa, status: novoStatus };
+      }
+      return tarefa;
+    }));
+    
+    setTimers(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
+
+  const handleResetarTarefas = () => {
+    setShowResetModal(true);
+  };
+
+  const confirmarReset = () => {
+    // Apenas tarefas concluídas podem ser resetadas
+    const tarefasConcluidas = tarefas.filter(t => t.status === 'Concluída');
+    
+    if (tarefasConcluidas.length === 0) {
+      alert('Não há tarefas concluídas para resetar!');
+      setShowResetModal(false);
+      return;
+    }
+
+    // Mover tarefas concluídas para o histórico da semana
+    const novasHistoricoSemana = tarefasConcluidas.map(t => ({
+      id: t.id,
+      titulo: t.titulo,
+      descricao: t.descricao,
+      status: 'Concluída',
+      tempoGasto: t.tempoGasto,
+      concluida: new Date().toISOString(),
+      resultado: t.resultado || 'Tarefa concluída com sucesso',
+      categoria: t.categoria,
+      tipo: t.tipo,
+      prioridade: t.prioridade,
+      problemas: t.problemas || []
+    }));
+
+    // Mover histórico do dia para histórico da semana
+    const novoHistoricoSemana = [...historicoSemana, ...historicoTarefas, ...novasHistoricoSemana];
+    
+    setHistoricoSemana(novoHistoricoSemana);
+    setHistoricoTarefas([]);
+    setTarefas(tarefas.filter(t => t.status !== 'Concluída'));
+    setShowResetModal(false);
+  };
+
+  const handleDuplicarTarefa = (tarefa) => {
+    const novaTarefaDuplicada = {
+      ...tarefa,
+      id: Date.now(),
+      titulo: `${tarefa.titulo} (Cópia)`,
+      status: 'Pendente',
+      progresso: 0,
+      tempoGasto: '0min',
+      criadoEm: new Date().toISOString()
+    };
+    
+    setTarefas([...tarefas, novaTarefaDuplicada]);
+  };
+
+  const handleLimparHistoricoDia = () => {
+    if (historicoTarefas.length === 0) {
+      alert('Não há tarefas no histórico do dia para limpar!');
+      return;
+    }
+    
+    // Mover histórico do dia para histórico da semana
+    const novoHistoricoSemana = [...historicoSemana, ...historicoTarefas];
+    setHistoricoSemana(novoHistoricoSemana);
+    setHistoricoTarefas([]);
+    
+    alert('Histórico do dia transferido para o histórico da semana!');
+  };
+
+  const handleLimparHistoricoSemana = () => {
+    if (!isSuperAdmin) {
+      alert('Apenas administradores podem limpar o histórico da semana!');
+      return;
+    }
+    
+    if (historicoSemana.length === 0) {
+      alert('Não há tarefas no histórico da semana para limpar!');
+      return;
+    }
+    
+    const confirmacao = confirm(
+      `Tem certeza que deseja limpar o histórico da semana?\n\n` +
+      `Isso irá remover permanentemente ${historicoSemana.length} tarefa(s) do histórico.\n\n` +
+      `Esta ação não pode ser desfeita!`
+    );
+    
+    if (confirmacao) {
+      setHistoricoSemana([]);
+      alert('Histórico da semana limpo com sucesso!');
+    }
+  };
+
+  const handleExportarRelatorio = () => {
+    // Combinar todas as tarefas concluídas (histórico do dia + histórico da semana + tarefas concluídas)
+    const tarefasConcluidas = tarefas.filter(t => t.status === 'Concluída');
+    const todasTarefasConcluidas = [
+      ...tarefasConcluidas.map(t => ({
+        ...t,
+        concluida: new Date().toISOString(),
+        origem: 'Tarefas Atuais'
+      })),
+      ...historicoTarefas.map(h => ({
+        ...h,
+        origem: 'Histórico do Dia'
+      })),
+      ...historicoSemana.map(h => ({
+        ...h,
+        origem: 'Histórico da Semana'
+      }))
+    ];
+
+    if (todasTarefasConcluidas.length === 0) {
+      alert('Não há tarefas concluídas para exportar!');
+      return;
+    }
+
+    // Preparar dados para o Excel
+    const dadosExcel = todasTarefasConcluidas.map((tarefa, index) => ({
+      'Nº': index + 1,
+      'Título': tarefa.titulo,
+      'Descrição': tarefa.descricao,
+      'Categoria': tarefa.categoria,
+      'Tipo': tarefa.tipo || 'N/A',
+      'Prioridade': tarefa.prioridade || 'N/A',
+      'Tempo Gasto': tarefa.tempoGasto,
+      'Tempo Estimado': tarefa.tempoEstimado || 'N/A',
+      'Data Conclusão': new Date(tarefa.concluida).toLocaleDateString('pt-BR'),
+      'Hora Conclusão': new Date(tarefa.concluida).toLocaleTimeString('pt-BR'),
+      'Status Final': tarefa.status || 'Concluída',
+      'Problemas Relatados': tarefa.problemas && tarefa.problemas.length > 0 ? 'Sim' : 'Não',
+      'Detalhes dos Problemas': tarefa.problemas && tarefa.problemas.length > 0 ? 
+        tarefa.problemas.map(p => `${p.tipo}: ${p.descricao}`).join('; ') : 'N/A',
+      'Resultado': tarefa.resultado || 'Tarefa concluída com sucesso',
+      'Responsável': tarefa.responsavel || 'Você',
+      'Origem': tarefa.origem
+    }));
+
+    // Criar planilha Excel
+    const ws = XLSX.utils.json_to_sheet(dadosExcel);
+    
+    // Adicionar estatísticas resumidas
+    const estatisticas = [
+      {},
+      { 'Nº': 'RESUMO ESTATÍSTICO' },
+      { 'Nº': 'Total de Tarefas:', 'Título': todasTarefasConcluidas.length },
+      { 'Nº': 'Com Problemas:', 'Título': todasTarefasConcluidas.filter(t => t.problemas && t.problemas.length > 0).length },
+      { 'Nº': 'Sem Problemas:', 'Título': todasTarefasConcluidas.filter(t => !t.problemas || t.problemas.length === 0).length },
+      { 'Nº': 'Tarefas Atuais:', 'Título': todasTarefasConcluidas.filter(t => t.origem === 'Tarefas Atuais').length },
+      { 'Nº': 'Histórico do Dia:', 'Título': todasTarefasConcluidas.filter(t => t.origem === 'Histórico do Dia').length },
+      { 'Nº': 'Histórico da Semana:', 'Título': todasTarefasConcluidas.filter(t => t.origem === 'Histórico da Semana').length },
+      { 'Nº': 'Gerado em:', 'Título': new Date().toLocaleString('pt-BR') }
+    ];
+    
+    XLSX.utils.sheet_add_json(ws, estatisticas, { origin: -1, skipHeader: true });
+    
+    // Configurar largura das colunas
+    const colWidths = [
+      { wch: 5 },   // Nº
+      { wch: 25 },  // Título
+      { wch: 35 },  // Descrição
+      { wch: 15 },  // Categoria
+      { wch: 15 },  // Tipo
+      { wch: 12 },  // Prioridade
+      { wch: 12 },  // Tempo Gasto
+      { wch: 15 },  // Tempo Estimado
+      { wch: 12 },  // Data Conclusão
+      { wch: 12 },  // Hora Conclusão
+      { wch: 12 },  // Status Final
+      { wch: 18 },  // Problemas Relatados
+      { wch: 50 },  // Detalhes dos Problemas
+      { wch: 30 },  // Resultado
+      { wch: 15 },  // Responsável
+      { wch: 18 }   // Origem
+    ];
+    ws['!cols'] = colWidths;
+
+    // Criar workbook
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Tarefas Concluídas');
+
+    // Adicionar metadados
+    const metadados = {
+      'A1': { v: 'RELATÓRIO DE TAREFAS CONCLUÍDAS', t: 's' }
+    };
+
+    // Gerar nome do arquivo com data atual
+    const dataAtual = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
+    const nomeArquivo = `Relatorio_Tarefas_Concluidas_${dataAtual}.xlsx`;
+
+    // Fazer download
+    XLSX.writeFile(wb, nomeArquivo);
   };
 
   const tipoOptions = ['Ligações', 'Emails', 'Reunião', 'Proposta', 'Qualificação', 'Follow-up', 'Administrativo'];
@@ -228,6 +636,20 @@ function TarefasDiarias() {
             </div>
           </div>
           <div className="header-actions">
+            <div className="user-info">
+              <User size={16} />
+              <span className={`user-role ${isSuperAdmin ? 'super-admin' : 'regular-user'}`}>
+                {isSuperAdmin ? 'SUPER_ADMIN' : (userRole || 'USER')}
+              </span>
+            </div>
+            <button 
+              className="action-btn secondary" 
+              onClick={handleResetarTarefas}
+              title="Resetar tarefas do dia"
+            >
+              <RotateCcw size={16} />
+              Resetar Dia
+            </button>
             <button className="action-btn secondary" onClick={() => window.location.reload()}>
               <RefreshCw size={16} />
               Atualizar
@@ -239,6 +661,24 @@ function TarefasDiarias() {
               <Plus size={16} />
               Nova Tarefa
             </button>
+            <button 
+              className="action-btn success"
+              onClick={handleExportarRelatorio}
+              title="Exportar relatório de tarefas concluídas"
+            >
+              <Download size={16} />
+              Exportar Relatório
+            </button>
+            {isSuperAdmin && (
+              <button 
+                className="action-btn danger"
+                onClick={handleLimparHistoricoSemana}
+                title="Limpar histórico da semana (Apenas Admin)"
+              >
+                <Archive size={16} />
+                Limpar Histórico Semana
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -300,6 +740,70 @@ function TarefasDiarias() {
             </div>
           </div>
         </div>
+
+        {stats.comProblema > 0 && (
+          <div className="stat-card">
+            <div className="stat-icon red">
+              <AlertCircle size={24} />
+            </div>
+            <div className="stat-content">
+              <div className="stat-value">{stats.comProblema}</div>
+              <div className="stat-label">Com Problema</div>
+              <div className="stat-trend negative">
+                <AlertCircle size={12} />
+                Requer atenção
+              </div>
+            </div>
+          </div>
+        )}
+
+        {stats.atrasadas > 0 && (
+          <div className="stat-card">
+            <div className="stat-icon red">
+              <Clock size={24} />
+            </div>
+            <div className="stat-content">
+              <div className="stat-value">{stats.atrasadas}</div>
+              <div className="stat-label">Atrasadas</div>
+              <div className="stat-trend negative">
+                <AlertCircle size={12} />
+                Prazo vencido
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isSuperAdmin && (
+          <div className="stat-card">
+            <div className="stat-icon orange">
+              <Archive size={24} />
+            </div>
+            <div className="stat-content">
+              <div className="stat-value">{historicoSemana.length}</div>
+              <div className="stat-label">Histórico Semana</div>
+              <div className="stat-trend">
+                <History size={12} />
+                Admin view
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isSuperAdmin && historicoTarefas.length > 0 && (
+          <div className="stat-card">
+            <div className="stat-icon teal">
+              <FileText size={24} />
+            </div>
+            <div className="stat-content">
+              <div className="stat-value">{historicoTarefas.length}</div>
+              <div className="stat-label">Histórico Dia</div>
+              <div className="stat-trend">
+                <Calendar size={12} />
+                Admin view
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Controles e Filtros */}
@@ -326,6 +830,7 @@ function TarefasDiarias() {
             <option value="Em andamento">Em Andamento</option>
             <option value="Concluída">Concluída</option>
             <option value="Agendada">Agendada</option>
+            <option value="Com Problema">Com Problema</option>
           </select>
 
           <select
@@ -371,7 +876,15 @@ function TarefasDiarias() {
 
           <div className="tasks-list">
             {tarefasFiltradas.length > 0 ? tarefasFiltradas.map(tarefa => (
-              <div key={tarefa.id} className="task-card">
+              <div key={tarefa.id} className={`task-card ${isTaskOverdue(tarefa.prazo, tarefa.status) ? 'overdue' : ''}`}>
+                {/* Indicador de atraso */}
+                {isTaskOverdue(tarefa.prazo, tarefa.status) && (
+                  <div className="overdue-indicator">
+                    <AlertCircle size={16} />
+                    <span>Tarefa em atraso</span>
+                  </div>
+                )}
+                
                 <div className="task-header">
                   <div className="task-info">
                     <div className="task-checkbox">
@@ -391,6 +904,16 @@ function TarefasDiarias() {
                         {tarefa.titulo}
                       </h4>
                       <p className="task-description">{tarefa.descricao}</p>
+                      
+                      {/* Indicador de problema */}
+                      {tarefa.status === 'Com Problema' && tarefa.problema && (
+                        <div className="problem-indicator">
+                          <AlertCircle size={14} />
+                          <span className="problem-text">
+                            <strong>Problema:</strong> {tarefa.problema}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                   
@@ -434,15 +957,55 @@ function TarefasDiarias() {
                   </div>
 
                   <div className="task-actions">
-                    <button className="task-action-btn" title="Iniciar/Pausar">
+                    {/* Todos os botões em uma linha */}
+                    {tarefa.status !== 'Concluída' && (
+                      <button 
+                        className="task-action-btn success" 
+                        title="Concluir Tarefa"
+                        onClick={() => handleMarcarConcluida(tarefa.id)}
+                      >
+                        <CheckCircle size={16} />
+                      </button>
+                    )}
+                    {tarefa.status !== 'Concluída' && (
+                      <button 
+                        className="task-action-btn warning" 
+                        title="Reportar Problema"
+                        onClick={() => handleReportarProblema(tarefa)}
+                      >
+                        <AlertCircle size={16} />
+                      </button>
+                    )}
+                    <button 
+                      className="task-action-btn" 
+                      title={tarefa.status === 'Em andamento' ? 'Pausar' : 'Iniciar'}
+                      onClick={() => handleIniciarPausarTarefa(tarefa.id)}
+                    >
                       {tarefa.status === 'Em andamento' ? <Pause size={16} /> : <Play size={16} />}
                     </button>
-                    <button className="task-action-btn" title="Editar">
+                    <button 
+                      className="task-action-btn" 
+                      title="Editar"
+                      onClick={() => handleEditarTarefa(tarefa)}
+                    >
                       <Edit size={16} />
                     </button>
-                    <button className="task-action-btn" title="Mais opções">
-                      <MoreVertical size={16} />
+                    <button 
+                      className="task-action-btn" 
+                      title="Duplicar"
+                      onClick={() => handleDuplicarTarefa(tarefa)}
+                    >
+                      <Copy size={16} />
                     </button>
+                    {isSuperAdmin && (
+                      <button 
+                        className="task-action-btn danger" 
+                        title="Excluir (Apenas Admin)"
+                        onClick={() => handleExcluirTarefa(tarefa)}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -468,14 +1031,26 @@ function TarefasDiarias() {
         <div className="history-section">
           <div className="section-header">
             <h3 className="section-title">Histórico do Dia</h3>
-            <button className="view-all-btn">
-              <Eye size={14} />
-              Ver Tudo
-            </button>
+            <div className="header-actions">
+              {historicoTarefas.length > 0 && (
+                <button 
+                  className="clear-history-btn"
+                  onClick={handleLimparHistoricoDia}
+                  title="Limpar histórico do dia"
+                >
+                  <Trash2 size={14} />
+                  Limpar
+                </button>
+              )}
+              <button className="view-all-btn">
+                <Eye size={14} />
+                Ver Tudo
+              </button>
+            </div>
           </div>
 
           <div className="history-list">
-            {historicoTarefas.map(item => (
+            {historicoTarefas.length > 0 ? historicoTarefas.map(item => (
               <div key={item.id} className="history-item">
                 <div className="history-status">
                   <CheckCircle className="status-icon completed" size={16} />
@@ -492,7 +1067,51 @@ function TarefasDiarias() {
                   </div>
                 </div>
               </div>
-            ))}
+            )) : (
+              <div className="empty-history">
+                <History size={32} />
+                <p>Nenhuma tarefa concluída hoje</p>
+              </div>
+            )}
+          </div>
+
+          {/* Histórico da Semana */}
+          <div className="section-header">
+            <h3 className="section-title">Histórico da Semana</h3>
+            <button className="view-all-btn">
+              <Archive size={14} />
+              Ver Tudo
+            </button>
+          </div>
+
+          <div className="history-list">
+            {historicoSemana.length > 0 ? historicoSemana.slice(0, 5).map(item => (
+              <div key={item.id} className="history-item">
+                <div className="history-status">
+                  <CheckCircle className="status-icon completed" size={16} />
+                </div>
+                <div className="history-content">
+                  <h5 className="history-title">{item.titulo}</h5>
+                  <p className="history-description">{item.descricao}</p>
+                  <div className="history-meta">
+                    <span className="history-time">
+                      <Clock size={12} />
+                      {item.tempoGasto}
+                    </span>
+                    <span className="history-result">{item.resultado}</span>
+                  </div>
+                  <div className="history-date">
+                    <Calendar size={10} />
+                    <span>{new Date(item.concluida).toLocaleDateString('pt-BR')}</span>
+                  </div>
+                </div>
+              </div>
+            )) : (
+              <div className="empty-history">
+                <Archive size={32} />
+                <p>Nenhuma tarefa no histórico da semana</p>
+              </div>
+            )}
           </div>
 
           {/* Widget de Produtividade */}
@@ -637,6 +1256,310 @@ function TarefasDiarias() {
         </div>
       )}
 
+      {/* Modal Editar Tarefa */}
+      {showEditModal && tarefaEditando && (
+        <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">Editar Tarefa</h3>
+              <button 
+                className="close-btn"
+                onClick={() => setShowEditModal(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleSalvarEdicao} className="task-form">
+              <div className="form-group">
+                <label className="form-label">Título da Tarefa</label>
+                <input
+                  type="text"
+                  value={tarefaEditando.titulo}
+                  onChange={(e) => setTarefaEditando({...tarefaEditando, titulo: e.target.value})}
+                  className="form-input"
+                  placeholder="Ex: Ligar para leads quentes"
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Descrição</label>
+                <textarea
+                  value={tarefaEditando.descricao}
+                  onChange={(e) => setTarefaEditando({...tarefaEditando, descricao: e.target.value})}
+                  className="form-textarea"
+                  placeholder="Descreva os detalhes da tarefa..."
+                  rows="3"
+                ></textarea>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Tipo</label>
+                  <select
+                    value={tarefaEditando.tipo}
+                    onChange={(e) => setTarefaEditando({...tarefaEditando, tipo: e.target.value})}
+                    className="form-select"
+                  >
+                    {tipoOptions.map(tipo => (
+                      <option key={tipo} value={tipo}>{tipo}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Prioridade</label>
+                  <select
+                    value={tarefaEditando.prioridade}
+                    onChange={(e) => setTarefaEditando({...tarefaEditando, prioridade: e.target.value})}
+                    className="form-select"
+                  >
+                    {prioridadeOptions.map(prioridade => (
+                      <option key={prioridade} value={prioridade}>{prioridade}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Status</label>
+                  <select
+                    value={tarefaEditando.status}
+                    onChange={(e) => setTarefaEditando({...tarefaEditando, status: e.target.value})}
+                    className="form-select"
+                  >
+                    <option value="Pendente">Pendente</option>
+                    <option value="Em andamento">Em andamento</option>
+                    <option value="Concluída">Concluída</option>
+                    <option value="Agendada">Agendada</option>
+                    <option value="Com Problema">Com Problema</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Progresso (%)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={tarefaEditando.progresso}
+                    onChange={(e) => setTarefaEditando({...tarefaEditando, progresso: parseInt(e.target.value)})}
+                    className="form-input"
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Categoria</label>
+                  <select
+                    value={tarefaEditando.categoria}
+                    onChange={(e) => setTarefaEditando({...tarefaEditando, categoria: e.target.value})}
+                    className="form-select"
+                  >
+                    {categoriaOptions.map(categoria => (
+                      <option key={categoria} value={categoria}>{categoria}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Tempo Estimado</label>
+                  <input
+                    type="text"
+                    value={tarefaEditando.tempoEstimado}
+                    onChange={(e) => setTarefaEditando({...tarefaEditando, tempoEstimado: e.target.value})}
+                    className="form-input"
+                    placeholder="Ex: 2h, 30min"
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Prazo</label>
+                <input
+                  type="datetime-local"
+                  value={tarefaEditando.prazo}
+                  onChange={(e) => setTarefaEditando({...tarefaEditando, prazo: e.target.value})}
+                  className="form-input"
+                />
+              </div>
+
+              <div className="modal-actions">
+                <button 
+                  type="button" 
+                  className="btn-cancel"
+                  onClick={() => setShowEditModal(false)}
+                >
+                  Cancelar
+                </button>
+                <button type="submit" className="btn-save">
+                  <Save size={16} />
+                  Salvar Alterações
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Confirmar Exclusão */}
+      {showDeleteModal && tarefaParaExcluir && (
+        <div className="modal-overlay" onClick={() => setShowDeleteModal(false)}>
+          <div className="modal-content small" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">Confirmar Exclusão</h3>
+              <button 
+                className="close-btn"
+                onClick={() => setShowDeleteModal(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="delete-confirmation">
+              <div className="delete-icon">
+                <Trash2 size={48} />
+              </div>
+              <h4>Tem certeza que deseja excluir esta tarefa?</h4>
+              <p>
+                <strong>{tarefaParaExcluir.titulo}</strong>
+              </p>
+              <p className="warning-text">Esta ação não pode ser desfeita.</p>
+            </div>
+
+            <div className="modal-actions">
+              <button 
+                className="btn-cancel"
+                onClick={() => setShowDeleteModal(false)}
+              >
+                Cancelar
+              </button>
+              <button 
+                className="btn-danger"
+                onClick={confirmarExclusao}
+              >
+                <Trash2 size={16} />
+                Excluir Tarefa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Confirmar Reset */}
+      {showResetModal && (
+        <div className="modal-overlay" onClick={() => setShowResetModal(false)}>
+          <div className="modal-content small" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">Resetar Tarefas do Dia</h3>
+              <button 
+                className="close-btn"
+                onClick={() => setShowResetModal(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="reset-confirmation">
+              <div className="reset-icon">
+                <RotateCcw size={48} />
+              </div>
+              <h4>Resetar todas as tarefas do dia?</h4>
+              <p>Esta ação irá:</p>
+              <ul className="reset-actions">
+                <li>Mover tarefas concluídas para o histórico da semana</li>
+                <li>Mover histórico do dia para o histórico da semana</li>
+                <li>Limpar tarefas concluídas da lista atual</li>
+              </ul>
+              <p className="warning-text">Esta ação não pode ser desfeita.</p>
+            </div>
+
+            <div className="modal-actions">
+              <button 
+                className="btn-cancel"
+                onClick={() => setShowResetModal(false)}
+              >
+                Cancelar
+              </button>
+              <button 
+                className="btn-warning"
+                onClick={confirmarReset}
+              >
+                <RotateCcw size={16} />
+                Resetar Dia
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Reportar Problema */}
+      {showProblemModal && tarefaComProblema && (
+        <div className="modal-overlay" onClick={() => setShowProblemModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">Reportar Problema na Tarefa</h3>
+              <button 
+                className="close-btn"
+                onClick={() => setShowProblemModal(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="problem-form">
+              <div className="task-info-summary">
+                <h4>Tarefa: {tarefaComProblema.titulo}</h4>
+                <p>{tarefaComProblema.descricao}</p>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Descreva o problema encontrado:</label>
+                <textarea
+                  value={problemaDescricao}
+                  onChange={(e) => setProblemaDescricao(e.target.value)}
+                  className="form-textarea"
+                  placeholder="Explique qual é o problema para realizar esta tarefa, obstáculos encontrados, recursos necessários, etc."
+                  rows="4"
+                  required
+                ></textarea>
+              </div>
+
+              <div className="problem-examples">
+                <h5>Exemplos de problemas:</h5>
+                <ul>
+                  <li>Falta de informações do cliente</li>
+                  <li>Sistema indisponível</li>
+                  <li>Recurso necessário não disponível</li>
+                  <li>Dependência de terceiros</li>
+                  <li>Prazo muito apertado</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="modal-actions">
+              <button 
+                className="btn-cancel"
+                onClick={() => setShowProblemModal(false)}
+              >
+                Cancelar
+              </button>
+              <button 
+                className="btn-warning"
+                onClick={handleSalvarProblema}
+                disabled={!problemaDescricao.trim()}
+              >
+                <AlertCircle size={16} />
+                Reportar Problema
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style jsx>{`
         .tarefas-diarias-page {
           padding: 2rem;
@@ -733,6 +1656,28 @@ function TarefasDiarias() {
           align-items: center;
         }
 
+        .user-info {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.75rem 1rem;
+          border-radius: 12px;
+          background: rgba(255, 255, 255, 0.8);
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          font-weight: 600;
+          font-size: 0.875rem;
+        }
+
+        .user-role.super-admin {
+          color: #dc2626;
+          font-weight: 700;
+        }
+
+        .user-role.regular-user {
+          color: #64748b;
+        }
+
         .action-btn {
           display: flex;
           align-items: center;
@@ -772,6 +1717,28 @@ function TarefasDiarias() {
         .action-btn.primary:hover {
           transform: translateY(-2px);
           box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+        }
+
+        .action-btn.success {
+          background: linear-gradient(135deg, #10b981, #059669);
+          color: white;
+          box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+        }
+
+        .action-btn.success:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+        }
+
+        .action-btn.danger {
+          background: linear-gradient(135deg, #ef4444, #dc2626);
+          color: white;
+          box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+        }
+
+        .action-btn.danger:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
         }
 
         .action-btn.secondary {
@@ -868,9 +1835,19 @@ function TarefasDiarias() {
           color: #f59e0b;
         }
 
+        .stat-icon.teal {
+          background: linear-gradient(135deg, rgba(20, 184, 166, 0.2), rgba(20, 184, 166, 0.1));
+          color: #14b8a6;
+        }
+
         .stat-icon.purple {
           background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(139, 92, 246, 0.1));
           color: #8b5cf6;
+        }
+
+        .stat-icon.red {
+          background: linear-gradient(135deg, rgba(220, 38, 38, 0.2), rgba(220, 38, 38, 0.1));
+          color: #dc2626;
         }
 
         .stat-content {
@@ -911,6 +1888,11 @@ function TarefasDiarias() {
         .stat-trend.warning {
           color: #f59e0b;
           background: rgba(245, 158, 11, 0.1);
+        }
+
+        .stat-trend.negative {
+          color: #dc2626;
+          background: rgba(220, 38, 38, 0.1);
         }
 
         .stat-trend {
@@ -1281,6 +2263,182 @@ function TarefasDiarias() {
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
 
+        .task-action-btn.danger {
+          color: #dc2626;
+        }
+
+        .task-action-btn.danger:hover {
+          background: rgba(220, 38, 38, 0.1);
+          color: #dc2626;
+        }
+
+        .task-action-btn.success {
+          color: #16a34a;
+        }
+
+        .task-action-btn.success:hover {
+          background: rgba(22, 163, 74, 0.1);
+          color: #16a34a;
+        }
+
+        .task-action-btn.warning {
+          color: #d97706;
+        }
+
+        .task-action-btn.warning:hover {
+          background: rgba(217, 119, 6, 0.1);
+          color: #d97706;
+        }
+
+        .task-actions {
+          display: flex;
+          gap: 0.5rem;
+          align-items: center;
+          flex-wrap: wrap;
+        }
+
+        .primary-actions {
+          display: flex;
+          gap: 0.5rem;
+        }
+
+        .secondary-actions {
+          display: flex;
+          gap: 0.5rem;
+        }
+
+        /* Indicador de problema */
+        .problem-indicator {
+          display: flex;
+          align-items: flex-start;
+          gap: 0.5rem;
+          background: linear-gradient(135deg, #fef2f2, #fee2e2);
+          border: 1px solid #fecaca;
+          border-radius: 6px;
+          padding: 0.5rem;
+          margin-top: 0.5rem;
+          color: #dc2626;
+          font-size: 0.8rem;
+        }
+
+        .problem-text {
+          flex: 1;
+          line-height: 1.4;
+        }
+
+        .problem-text strong {
+          font-weight: 600;
+        }
+
+        /* Botões do cabeçalho */
+        .header-actions {
+          display: flex;
+          gap: 0.5rem;
+          align-items: center;
+        }
+
+        .clear-history-btn {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.5rem 1rem;
+          background: rgba(239, 68, 68, 0.1);
+          border: 1px solid rgba(239, 68, 68, 0.2);
+          border-radius: 8px;
+          color: #dc2626;
+          font-size: 0.875rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.3s ease;
+        }
+
+        .clear-history-btn:hover {
+          background: rgba(239, 68, 68, 0.15);
+          transform: translateY(-1px);
+        }
+
+        /* Indicador de atraso */
+        .overdue-indicator {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          background: linear-gradient(135deg, #fef2f2, #fee2e2);
+          border: 1px solid #fecaca;
+          border-radius: 8px;
+          padding: 0.5rem 1rem;
+          margin-bottom: 1rem;
+          color: #dc2626;
+          font-size: 0.875rem;
+          font-weight: 600;
+          animation: pulse-red 2s infinite;
+        }
+
+        @keyframes pulse-red {
+          0%, 100% {
+            box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7);
+          }
+          50% {
+            box-shadow: 0 0 0 10px rgba(220, 38, 38, 0);
+          }
+        }
+
+        /* Card com atraso */
+        .task-card.overdue {
+          border-left: 4px solid #dc2626;
+          background: linear-gradient(135deg, #fef2f2, #fef7f7);
+        }
+
+        /* Estilos do modal de problema */
+        .problem-form {
+          display: flex;
+          flex-direction: column;
+          gap: 1.5rem;
+        }
+
+        .task-info-summary {
+          background: rgba(59, 130, 246, 0.05);
+          border: 1px solid rgba(59, 130, 246, 0.1);
+          border-radius: 8px;
+          padding: 1rem;
+        }
+
+        .task-info-summary h4 {
+          font-size: 1.1rem;
+          font-weight: 600;
+          color: #1e293b;
+          margin-bottom: 0.5rem;
+        }
+
+        .task-info-summary p {
+          color: #64748b;
+          margin: 0;
+        }
+
+        .problem-examples {
+          background: rgba(245, 158, 11, 0.05);
+          border: 1px solid rgba(245, 158, 11, 0.1);
+          border-radius: 8px;
+          padding: 1rem;
+        }
+
+        .problem-examples h5 {
+          font-size: 0.9rem;
+          font-weight: 600;
+          color: #1e293b;
+          margin-bottom: 0.5rem;
+        }
+
+        .problem-examples ul {
+          margin: 0;
+          padding-left: 1.5rem;
+        }
+
+        .problem-examples li {
+          color: #64748b;
+          font-size: 0.875rem;
+          margin-bottom: 0.25rem;
+        }
+
         .task-tags {
           margin-top: 1rem;
           display: flex;
@@ -1295,6 +2453,273 @@ function TarefasDiarias() {
           border-radius: 6px;
           font-size: 0.7rem;
           font-weight: 600;
+        }
+
+        /* Estados vazios */
+        .empty-state {
+          text-align: center;
+          padding: 3rem 2rem;
+          background: rgba(248, 250, 252, 0.6);
+          border-radius: 12px;
+          border: 2px dashed #cbd5e1;
+          color: #64748b;
+        }
+
+        .empty-state h3 {
+          font-size: 1.25rem;
+          font-weight: 700;
+          color: #1e293b;
+          margin: 1rem 0 0.5rem 0;
+        }
+
+        .empty-state p {
+          font-size: 0.9rem;
+          line-height: 1.4;
+        }
+
+        .empty-history {
+          text-align: center;
+          padding: 2rem 1rem;
+          color: #64748b;
+          background: rgba(248, 250, 252, 0.4);
+          border-radius: 8px;
+          border: 1px dashed #cbd5e1;
+        }
+
+        .empty-history p {
+          margin-top: 0.5rem;
+          font-size: 0.875rem;
+        }
+
+        /* Histórico da semana */
+        .history-date {
+          display: flex;
+          align-items: center;
+          gap: 0.25rem;
+          font-size: 0.7rem;
+          color: #94a3b8;
+          margin-top: 0.25rem;
+        }
+
+        /* Estilos dos modais */
+        .modal-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.5);
+          backdrop-filter: blur(8px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 50;
+          padding: 1rem;
+        }
+
+        .modal-content {
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(20px);
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          border-radius: 16px;
+          padding: 2rem;
+          width: 100%;
+          max-width: 600px;
+          max-height: 90vh;
+          overflow-y: auto;
+          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-content.small {
+          max-width: 400px;
+        }
+
+        .modal-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 2rem;
+          padding-bottom: 1rem;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .modal-title {
+          font-size: 1.5rem;
+          font-weight: 700;
+          color: #1e293b;
+          margin: 0;
+        }
+
+        .close-btn {
+          background: none;
+          border: none;
+          font-size: 1.5rem;
+          color: #64748b;
+          cursor: pointer;
+          padding: 0.25rem;
+          transition: all 0.3s ease;
+        }
+
+        .close-btn:hover {
+          color: #1e293b;
+          transform: scale(1.1);
+        }
+
+        .task-form {
+          display: flex;
+          flex-direction: column;
+          gap: 1.5rem;
+        }
+
+        .form-group {
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+        }
+
+        .form-label {
+          font-size: 0.875rem;
+          font-weight: 600;
+          color: #374151;
+        }
+
+        .form-input, .form-textarea, .form-select {
+          padding: 0.75rem 1rem;
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          border-radius: 8px;
+          background: rgba(255, 255, 255, 0.6);
+          backdrop-filter: blur(8px);
+          color: #1e293b;
+          font-size: 0.875rem;
+          transition: all 0.3s ease;
+        }
+
+        .form-input:focus, .form-textarea:focus, .form-select:focus {
+          outline: none;
+          border-color: #3b82f6;
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+          background: rgba(255, 255, 255, 0.9);
+          transform: translateY(-1px);
+        }
+
+        .form-row {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 1rem;
+        }
+
+        .modal-actions {
+          display: flex;
+          justify-content: flex-end;
+          gap: 1rem;
+          margin-top: 2rem;
+          padding-top: 1rem;
+          border-top: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-cancel, .btn-save, .btn-danger, .btn-warning {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.75rem 1.5rem;
+          border-radius: 8px;
+          font-weight: 600;
+          font-size: 0.875rem;
+          border: none;
+          cursor: pointer;
+          transition: all 0.3s ease;
+        }
+
+        .btn-cancel {
+          background: rgba(255, 255, 255, 0.8);
+          backdrop-filter: blur(10px);
+          color: #475569;
+          border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-cancel:hover {
+          background: rgba(255, 255, 255, 0.95);
+          transform: translateY(-1px);
+        }
+
+        .btn-save {
+          background: linear-gradient(135deg, #10b981, #059669);
+          color: white;
+          box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-save:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-danger {
+          background: linear-gradient(135deg, #ef4444, #dc2626);
+          color: white;
+          box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-danger:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
+        }
+
+        .btn-warning {
+          background: linear-gradient(135deg, #f59e0b, #d97706);
+          color: white;
+          box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+        }
+
+        .btn-warning:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 25px rgba(245, 158, 11, 0.4);
+        }
+
+        /* Confirmações dos modais */
+        .delete-confirmation,
+        .reset-confirmation {
+          text-align: center;
+          padding: 1rem 0;
+        }
+
+        .delete-icon,
+        .reset-icon {
+          display: flex;
+          justify-content: center;
+          margin-bottom: 1rem;
+          color: #ef4444;
+        }
+
+        .reset-icon {
+          color: #f59e0b;
+        }
+
+        .delete-confirmation h4,
+        .reset-confirmation h4 {
+          font-size: 1.25rem;
+          font-weight: 700;
+          color: #1e293b;
+          margin-bottom: 1rem;
+        }
+
+        .delete-confirmation p,
+        .reset-confirmation p {
+          color: #64748b;
+          margin-bottom: 0.5rem;
+        }
+
+        .warning-text {
+          color: #ef4444 !important;
+          font-weight: 600;
+          font-size: 0.875rem;
+        }
+
+        .reset-actions {
+          text-align: left;
+          margin: 1rem 0;
+          padding-left: 1rem;
+        }
+
+        .reset-actions li {
+          color: #64748b;
+          margin-bottom: 0.5rem;
         }
 
         /* Seção de Histórico */
@@ -1996,6 +3421,31 @@ function TarefasDiarias() {
           .modal-content {
             margin: 0.5rem;
             padding: 1.5rem;
+          }
+
+          .task-actions {
+            justify-content: center;
+            gap: 0.25rem;
+          }
+
+          .task-action-btn {
+            min-width: 2rem;
+            padding: 0.5rem;
+          }
+
+          .problem-indicator {
+            font-size: 0.75rem;
+            padding: 0.4rem;
+          }
+
+          .header-actions {
+            flex-direction: column;
+            gap: 0.25rem;
+          }
+
+          .clear-history-btn {
+            font-size: 0.75rem;
+            padding: 0.4rem 0.8rem;
           }
         }
 

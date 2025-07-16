@@ -14,7 +14,7 @@ const AppContent = () => {
     return <Loading />;
   }
 
-  // Se usuário logado, mostrar dashboard
+  // Se logado, mostrar dashboard
   if (currentUser) {
     return <Dashboard />;
   }
