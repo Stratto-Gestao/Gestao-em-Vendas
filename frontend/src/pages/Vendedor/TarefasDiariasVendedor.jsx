@@ -16,144 +16,23 @@ function TarefasDiarias() {
   // Verificar se o usuário é SUPER_ADMIN (única role com acesso total)
   const isSuperAdmin = userRole === 'SUPER_ADMIN';
   
-  // Dados iniciais (serão carregados do localStorage se existirem)
-  const tarefasIniciais = [
-    {
-      id: 1,
-      titulo: 'Ligar para leads quentes',
-      descricao: 'Fazer follow-up com 15 leads qualificados da semana passada',
-      tipo: 'Ligações',
-      prioridade: 'Alta',
-      status: 'Em andamento',
-      tempoEstimado: '2h',
-      tempoGasto: '45min',
-      progresso: 40,
-      criadoEm: '2024-07-12T08:00:00',
-      prazo: '2024-07-12T17:00:00',
-      responsavel: 'Você',
-      tags: ['vendas', 'follow-up'],
-      categoria: 'Prospecção',
-      criadoPor: 'admin'
-    },
-    {
-      id: 2,
-      titulo: 'Qualificar novos leads',
-      descricao: 'Analisar e qualificar 25 novos leads recebidos hoje',
-      tipo: 'Qualificação',
-      prioridade: 'Média',
-      status: 'Pendente',
-      tempoEstimado: '1.5h',
-      tempoGasto: '0min',
-      progresso: 0,
-      criadoEm: '2024-07-12T09:00:00',
-      prazo: '2024-07-12T15:00:00',
-      responsavel: 'Você',
-      tags: ['qualificação', 'leads'],
-      categoria: 'Análise',
-      criadoPor: 'admin'
-    },
-    {
-      id: 3,
-      titulo: 'Enviar proposta para TechStart',
-      descricao: 'Finalizar e enviar proposta comercial personalizada',
-      tipo: 'Proposta',
-      prioridade: 'Alta',
-      status: 'Concluída',
-      tempoEstimado: '1h',
-      tempoGasto: '55min',
-      progresso: 100,
-      criadoEm: '2024-07-12T10:00:00',
-      prazo: '2024-07-12T14:00:00',
-      responsavel: 'Você',
-      tags: ['proposta', 'cliente'],
-      categoria: 'Vendas',
-      criadoPor: 'admin'
-    },
-    {
-      id: 4,
-      titulo: 'Reunião de alinhamento',
-      descricao: 'Participar da reunião semanal de alinhamento da equipe',
-      tipo: 'Reunião',
-      prioridade: 'Média',
-      status: 'Agendada',
-      tempoEstimado: '30min',
-      tempoGasto: '0min',
-      progresso: 0,
-      criadoEm: '2024-07-12T11:00:00',
-      prazo: '2024-07-12T16:00:00',
-      responsavel: 'Equipe',
-      tags: ['reunião', 'alinhamento'],
-      categoria: 'Administrativo',
-      criadoPor: 'admin'
-    }
-  ];
+  // Dados iniciais: vazio para não repopular dados fictícios
+  const tarefasIniciais = [];
 
   // Carregar dados do localStorage ou usar dados iniciais
   const [tarefas, setTarefas] = useState(() => {
     const savedTarefas = localStorage.getItem('tarefas');
-    return savedTarefas ? JSON.parse(savedTarefas) : tarefasIniciais;
+    return savedTarefas ? JSON.parse(savedTarefas) : [];
   });
 
   const [historicoTarefas, setHistoricoTarefas] = useState(() => {
     const savedHistorico = localStorage.getItem('historicoTarefas');
-    return savedHistorico ? JSON.parse(savedHistorico) : [
-      {
-        id: 101,
-        titulo: 'Apresentação para GlobalCorp',
-        descricao: 'Demo do produto para tomadores de decisão',
-        status: 'Concluída',
-        tempoGasto: '1h 30min',
-        concluida: '2024-07-12T14:30:00',
-        resultado: 'Positivo - Agendar próxima reunião',
-        categoria: 'Vendas'
-      },
-      {
-        id: 102,
-        titulo: 'Follow-up email campaign',
-        descricao: 'Envio de 50 emails de follow-up personalizados',
-        status: 'Concluída',
-        tempoGasto: '45min',
-        concluida: '2024-07-12T12:15:00',
-        resultado: '12 respostas recebidas',
-        categoria: 'Marketing'
-      },
-      {
-        id: 103,
-        titulo: 'Atualização CRM',
-        descricao: 'Atualizar informações de 30 leads no sistema',
-        status: 'Concluída',
-        tempoGasto: '25min',
-        concluida: '2024-07-12T11:45:00',
-        resultado: 'CRM atualizado com sucesso',
-        categoria: 'Administrativo'
-      }
-    ];
+    return savedHistorico ? JSON.parse(savedHistorico) : [];
   });
 
   const [historicoSemana, setHistoricoSemana] = useState(() => {
     const savedHistoricoSemana = localStorage.getItem('historicoSemana');
-    return savedHistoricoSemana ? JSON.parse(savedHistoricoSemana) : [
-      {
-        id: 201,
-        titulo: 'Negociação com MegaCorp',
-        descricao: 'Fechamento de contrato anual',
-        status: 'Concluída',
-        tempoGasto: '3h 20min',
-        concluida: '2024-07-10T16:45:00',
-        resultado: 'Contrato fechado - R$ 250.000',
-        categoria: 'Vendas'
-      },
-      {
-        id: 202,
-        titulo: 'Treinamento equipe',
-        descricao: 'Apresentação sobre novas funcionalidades',
-        status: 'Concluída',
-        tempoGasto: '2h',
-        concluida: '2024-07-09T14:00:00',
-        resultado: 'Equipe capacitada com sucesso',
-        categoria: 'Treinamento'
-      }
-    ];
+    return savedHistoricoSemana ? JSON.parse(savedHistoricoSemana) : [];
   });
 
   const [novaTarefa, setNovaTarefa] = useState({
@@ -1560,7 +1439,7 @@ function TarefasDiarias() {
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         .tarefas-diarias-page {
           padding: 2rem;
           background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);

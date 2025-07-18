@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { db } from '../../config/firebase';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from 'firebase/firestore';
 import {
   Plus, DollarSign, Target, TrendingUp, Calendar, Users,
   Search, Filter, MoreVertical, Edit, Trash2, Eye, Phone, Mail,
@@ -38,15 +40,14 @@ const GestaoNegocios = () => {
     valor: '',
     probabilidade: 50,
     estagio: 'Qualificação',
-    responsavel: 'Ana Costa',
+    responsavel: 'Rosana',
     dataFechamento: '',
-    origem: 'Website',
+    origem: 'Indicação',
     prioridade: 'Média',
     email: '',
     telefone: '',
     empresa: '',
     segmento: '',
-    funcionarios: '',
     website: '',
     endereco: '',
     observacoes: '',
@@ -86,6 +87,40 @@ const GestaoNegocios = () => {
     console.log('🔧 Para limpar todos os dados salvos, execute no console: localStorage.clear(); location.reload();');
     
     return () => clearInterval(timer);
+  }, []);
+
+  // Carrega dados do Firebase primeiro, depois localStorage se não houver dados
+  useEffect(() => {
+    const loadNegociosFromFirebase = async () => {
+      try {
+        const negociosSnapshot = await getDocs(collection(db, 'negocios'));
+        const negociosFirebase = negociosSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        
+        if (negociosFirebase.length > 0) {
+          setNegocios(negociosFirebase);
+          // Sincroniza com localStorage
+          localStorage.setItem('negocios', JSON.stringify(negociosFirebase));
+        } else {
+          // Se não há dados no Firebase, carrega do localStorage
+          const savedNegocios = localStorage.getItem('negocios');
+          if (savedNegocios) {
+            setNegocios(JSON.parse(savedNegocios));
+          }
+        }
+      } catch (error) {
+        console.log('Erro ao carregar do Firebase, usando localStorage:', error);
+        // Fallback para localStorage
+        const savedNegocios = localStorage.getItem('negocios');
+        if (savedNegocios) {
+          setNegocios(JSON.parse(savedNegocios));
+        }
+      }
+    };
+
+    loadNegociosFromFirebase();
   }, []);
 
   useEffect(() => {
@@ -444,7 +479,7 @@ const GestaoNegocios = () => {
     valorMedio: negocios.length > 0 ? negocios.reduce((acc, neg) => acc + neg.valor, 0) / negocios.length : 0,
     probabilidadeMedia: negocios.length > 0 ? negocios.reduce((acc, neg) => acc + neg.probabilidade, 0) / negocios.length : 0,
     valorPonderado: negocios.reduce((acc, neg) => acc + (neg.valor * neg.probabilidade / 100), 0),
-    qualificacao: negocios.filter(n => n.estagio === 'Qualificação').length,
+    // qualificacao: negocios.filter(n => n.estagio === 'Qualificação').length,
     proposta: negocios.filter(n => n.estagio === 'Proposta').length,
     negociacao: negocios.filter(n => n.estagio === 'Negociação').length,
     fechamento: negocios.filter(n => n.estagio === 'Fechamento').length
@@ -463,7 +498,7 @@ const GestaoNegocios = () => {
       id: Date.now(),
       ...newDealForm,
       valor: parseFloat(newDealForm.valor),
-      funcionarios: parseInt(newDealForm.funcionarios) || 0,
+
       dataCriacao: new Date().toISOString(),
       ultimaAtualizacao: new Date().toISOString(),
       avatar: newDealForm.empresa ? newDealForm.empresa.substring(0, 2).toUpperCase() : 'NN',
@@ -489,7 +524,6 @@ const GestaoNegocios = () => {
       telefone: '',
       empresa: '',
       segmento: '',
-      funcionarios: '',
       website: '',
       endereco: '',
       observacoes: '',
@@ -1909,9 +1943,9 @@ const GestaoNegocios = () => {
                     value={newDealForm.responsavel}
                     onChange={(e) => setNewDealForm({...newDealForm, responsavel: e.target.value})}
                   >
-                    <option value="Ana Costa">Ana Costa</option>
-                    <option value="Bruno Silva">Bruno Silva</option>
-                    <option value="Carlos Mendes">Carlos Mendes</option>
+                    <option value="Rosana">Rosana</option>
+                    <option value="Ana Paula">Ana Paula</option>
+                    <option value="Outro">Outro</option>
                   </select>
                 </div>
 
@@ -1932,12 +1966,11 @@ const GestaoNegocios = () => {
                     value={newDealForm.origem}
                     onChange={(e) => setNewDealForm({...newDealForm, origem: e.target.value})}
                   >
-                    <option value="Website">Website</option>
-                    <option value="LinkedIn">LinkedIn</option>
                     <option value="Indicação">Indicação</option>
-                    <option value="Evento">Evento</option>
-                    <option value="Cold Email">Cold Email</option>
-                    <option value="Referência">Referência</option>
+                    <option value="Instagram">Instagram</option>
+                    <option value="Google">Google</option>
+                    <option value="Ligação">Ligação</option>
+                    <option value="Outro">Outro</option>
                   </select>
                 </div>
 
@@ -1965,17 +1998,7 @@ const GestaoNegocios = () => {
                   />
                 </div>
 
-                <div className="form-group">
-                  <label htmlFor="funcionarios">Nº de Funcionários</label>
-                  <input
-                    type="number"
-                    id="funcionarios"
-                    value={newDealForm.funcionarios}
-                    onChange={(e) => setNewDealForm({...newDealForm, funcionarios: e.target.value})}
-                    placeholder="0"
-                    min="0"
-                  />
-                </div>
+
 
                 <div className="form-group">
                   <label htmlFor="website">Website</label>
@@ -2028,7 +2051,7 @@ const GestaoNegocios = () => {
                 </button>
                 <button type="submit" className="action-btn primary">
                   <Plus size={16} />
-                  Criar Negócio
+                  Salvar
                 </button>
               </div>
             </form>

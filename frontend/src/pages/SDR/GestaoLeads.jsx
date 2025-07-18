@@ -1,9 +1,27 @@
-import React, { useState } from 'react';
-import { 
-  Plus, Phone, Mail, CheckCircle, User, Building, Target, Clock, Search, 
-  Filter, MoreVertical, Star, Calendar, TrendingUp, Eye, Edit, Trash2,
-  Download, Upload, RefreshCw, ArrowUpDown, ChevronDown, MessageSquare
+import React, { useState, useEffect } from 'react';
+import {
+  Plus, DollarSign, Target, TrendingUp, Calendar, Users,
+  Search, Filter, MoreVertical, Edit, Trash2, Eye, Phone, Mail,
+  ArrowUpDown, RefreshCw, Download, Upload, BarChart3, Activity,
+  Clock, AlertCircle, CheckCircle, XCircle, Star, Flag,
+  Briefcase, Building, User, MessageSquare, FileText, Settings,
+  Award, Zap, PieChart, TrendingDown, ChevronDown, PlayCircle,
+  Pause, FastForward, RotateCcw, Share2, Bookmark, Heart,
+  Globe, MapPin, Camera, Video, Headphones, Send, Shield, Copy,
+  MessageCircle, X
 } from 'lucide-react';
+
+// Importações do Firebase
+import { auth, db } from '../../config/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { 
+  collection, 
+  addDoc, 
+  getDocs, 
+  updateDoc, 
+  deleteDoc, 
+  doc 
+} from 'firebase/firestore';
 
 // Componente de Estilos Modernos
 const ModernCRMStyles = () => (
@@ -490,6 +508,54 @@ const ModernCRMStyles = () => (
       box-shadow: 0 6px 20px rgba(37, 99, 235, 0.3);
     }
 
+    .action-btn.whatsapp {
+      background: linear-gradient(135deg, rgba(37, 211, 102, 0.2), rgba(37, 211, 102, 0.1));
+      color: #25d366;
+    }
+
+    .action-btn.whatsapp:hover {
+      background: linear-gradient(135deg, #25d366, #1fb855);
+      color: white;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(37, 211, 102, 0.3);
+    }
+
+    .action-btn.email {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(239, 68, 68, 0.1));
+      color: var(--accent-red);
+    }
+
+    .action-btn.email:hover {
+      background: linear-gradient(135deg, var(--accent-red), #dc2626);
+      color: white;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(239, 68, 68, 0.3);
+    }
+
+    .action-btn.edit {
+      background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(139, 92, 246, 0.1));
+      color: var(--accent-purple);
+    }
+
+    .action-btn.edit:hover {
+      background: linear-gradient(135deg, var(--accent-purple), #7c3aed);
+      color: white;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(139, 92, 246, 0.3);
+    }
+
+    .action-btn.delete {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(239, 68, 68, 0.1));
+      color: var(--accent-red);
+    }
+
+    .action-btn.delete:hover {
+      background: linear-gradient(135deg, var(--accent-red), #dc2626);
+      color: white;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(239, 68, 68, 0.3);
+    }
+
     .action-btn.secondary {
       background: linear-gradient(135deg, rgba(107, 114, 128, 0.2), rgba(107, 114, 128, 0.1));
       color: var(--secondary-text);
@@ -539,6 +605,11 @@ const ModernCRMStyles = () => (
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
     }
 
     .fade-in {
@@ -853,6 +924,11 @@ const ModernCRMStyles = () => (
       to { opacity: 1; transform: translateY(0); }
     }
 
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
     .fade-in {
       animation: fadeIn 0.3s ease-out;
     }
@@ -940,23 +1016,288 @@ const ModernCRMStyles = () => (
       padding-top: 1rem;
       border-top: 1px solid var(--border-light);
     }
+
+    .lead-observation {
+      margin: 0.25rem 0 0 0;
+      padding: 0.25rem 0.5rem;
+      background: rgba(59, 130, 246, 0.1);
+      border-radius: 4px;
+      border-left: 3px solid var(--accent-blue);
+    }
+
+    .lead-observation small {
+      color: var(--accent-blue);
+      font-size: 0.75rem;
+    }
+
+    .lead-next-action {
+      margin: 0.25rem 0 0 0;
+      padding: 0.25rem 0.5rem;
+      background: rgba(16, 185, 129, 0.1);
+      border-radius: 4px;
+      border-left: 3px solid var(--accent-green);
+    }
+
+    .lead-next-action small {
+      color: var(--accent-green);
+      font-size: 0.75rem;
+    }
+
+    .scoring-help {
+      background: rgba(245, 158, 11, 0.1);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      border-radius: 8px;
+      padding: 1rem;
+      margin: 1rem 0;
+      font-size: 0.875rem;
+    }
+
+    .scoring-help h4 {
+      color: var(--accent-orange);
+      margin: 0 0 0.5rem 0;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .scoring-levels {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 0.5rem;
+      margin: 0.5rem 0;
+    }
+
+    .scoring-level {
+      padding: 0.375rem 0.5rem;
+      border-radius: 6px;
+      text-align: center;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+
+    .scoring-level.cold {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--accent-red);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .scoring-level.warm {
+      background: rgba(245, 158, 11, 0.1);
+      color: var(--accent-orange);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+
+    .scoring-level.hot {
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--accent-green);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .scoring-level.qualified {
+      background: rgba(139, 92, 246, 0.1);
+      color: var(--accent-purple);
+      border: 1px solid rgba(139, 92, 246, 0.3);
+    }
+
+    /* ...existing styles... */
   `}</style>
 );
 
 function GestaoLeads() {
-  const [leads, setLeads] = useState([
-    { id: 1, nome: 'Carlos Silva', empresa: 'TechStart Solutions', email: 'carlos@techstart.com', telefone: '(11) 99999-9999', origem: 'LinkedIn', recebido: 'Há 2 dias', tentativas: 0, status: 'Novo', pontuacao: 85, proximaAcao: 'Ligar para apresentação', observacoes: 'Lead muito interessado em soluções de automação. Perfil ideal para nosso produto X.' },
-    { id: 2, nome: 'Maria Souza', empresa: 'Inovação Digital', email: 'maria@inovacao.com', telefone: '(21) 88888-8888', origem: 'Website', recebido: 'Há 5 dias', tentativas: 2, status: 'Contatado', pontuacao: 70, proximaAcao: 'Enviar proposta inicial', observacoes: 'Solicitou demonstração via formulário. Já enviou alguns requisitos.' },
-    { id: 3, nome: 'João Pereira', empresa: 'Global Corp', email: 'joao@globalcorp.com', telefone: '(31) 77777-7777', origem: 'E-mail Marketing', recebido: 'Há 10 dias', tentativas: 5, status: 'Não Qualificado', pontuacao: 40, proximaAcao: 'Arquivar lead', observacoes: 'Não demonstrou interesse após 5 tentativas de contato.' },
-    { id: 4, nome: 'Ana Costa', empresa: 'Smart Tech', email: 'ana@smarttech.com', telefone: '(41) 66666-6666', origem: 'Indicação', recebido: 'Há 1 dia', tentativas: 1, status: 'Qualificado', pontuacao: 95, proximaAcao: 'Agendar demonstração', observacoes: 'Lead altamente qualificado, já tem orçamento aprovado.' },
-    { id: 5, nome: 'Roberto Santos', empresa: 'Digital Future', email: 'roberto@digitalfuture.com', telefone: '(51) 55555-5555', origem: 'LinkedIn', recebido: 'Há 3 dias', tentativas: 0, status: 'Novo', pontuacao: 78, proximaAcao: 'Primeiro contato', observacoes: 'Empresa em crescimento, potencial para contrato de longo prazo.' },
-    { id: 6, nome: 'Fernanda Lima', empresa: 'Creative Agency', email: 'fernanda@creative.com', telefone: '(85) 44444-4444', origem: 'Website', recebido: 'Há 1 dia', tentativas: 0, status: 'Novo', pontuacao: 88, proximaAcao: 'Ligar hoje', observacoes: 'Interessada em automação de marketing digital.' },
-  ]);
-
+  const [leads, setLeads] = useState([]);
   const [selectedLead, setSelectedLead] = useState(null);
+  const [editingLead, setEditingLead] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [selectedLeads, setSelectedLeads] = useState([]);
+  const [showNewLeadModal, setShowNewLeadModal] = useState(false);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [newLeadForm, setNewLeadForm] = useState({
+    nome: '',
+    empresa: '',
+    email: '',
+    telefone: '',
+    origem: 'Website',
+    status: 'Novo',
+    pontuacao: 50,
+    proximaAcao: '',
+    observacoes: ''
+  });
+
+  // Debug log
+  console.log('GestaoLeads renderizado:', { 
+    showNewLeadModal, 
+    leadsCount: leads.length,
+    newLeadForm,
+    userAuthenticated: !!user,
+    loading
+  });
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      console.log('Estado de autenticação:', currentUser ? 'Usuário logado' : 'Usuário não logado');
+      setUser(currentUser);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      const fetchLeads = async () => {
+        try {
+          console.log('Buscando leads para usuário:', user.uid);
+          const querySnapshot = await getDocs(collection(db, 'leads'));
+          const leadsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          console.log('Leads carregados:', leadsData.length);
+          setLeads(leadsData);
+        } catch (error) {
+          console.error('Erro ao buscar leads:', error);
+        }
+      };
+      fetchLeads();
+    }
+  }, [user]);
+
+  const addLead = async (newLead) => {
+    try {
+      if (!user) {
+        throw new Error('Usuário não autenticado');
+      }
+
+      const leadData = {
+        ...newLead,
+        tentativas: 0,
+        recebido: new Date().toLocaleDateString('pt-BR'),
+        criadoEm: new Date().toISOString(),
+        criadoPor: user.uid,
+        responsavel: user.uid
+      };
+      
+      console.log('Dados do lead a serem salvos:', leadData);
+      console.log('Usuário autenticado:', user.uid);
+      
+      const docRef = await addDoc(collection(db, 'leads'), leadData);
+      console.log('Lead salvo com ID:', docRef.id);
+      
+      const newLeadWithId = { id: docRef.id, ...leadData };
+      setLeads(prevLeads => [...prevLeads, newLeadWithId]);
+      
+      return docRef;
+    } catch (error) {
+      console.error('Erro detalhado ao salvar lead:', error);
+      throw error;
+    }
+  };
+
+  const handleNewLeadSubmit = async (e) => {
+    e.preventDefault();
+    
+    // Verificar se o usuário está autenticado
+    if (!user) {
+      alert('Você precisa estar logado para criar leads.');
+      return;
+    }
+    
+    // Validação básica
+    if (!newLeadForm.nome || !newLeadForm.empresa || !newLeadForm.email) {
+      alert('Por favor, preencha todos os campos obrigatórios (Nome, Empresa, E-mail).');
+      return;
+    }
+    
+    try {
+      console.log('Enviando novo lead:', newLeadForm);
+      console.log('Usuário:', user.uid);
+      await addLead(newLeadForm);
+      console.log('Lead criado com sucesso!');
+      setShowNewLeadModal(false);
+      clearNewLeadForm();
+      alert('Lead criado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao adicionar lead:', error);
+      alert('Erro ao criar lead: ' + error.message);
+    }
+  };
+
+  const clearNewLeadForm = () => {
+    setNewLeadForm({
+      nome: '',
+      empresa: '',
+      email: '',
+      telefone: '',
+      origem: 'Website',
+      status: 'Novo',
+      pontuacao: 50,
+      proximaAcao: '',
+      observacoes: ''
+    });
+  };
+
+  const handleInputChange = (field, value) => {
+    console.log(`Alterando campo ${field}:`, value);
+    setNewLeadForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleWhatsApp = (telefone, nome) => {
+    const message = `Olá ${nome}, tudo bem? Somos da empresa e gostaríamos de apresentar nossa solução.`;
+    const whatsappURL = `https://wa.me/55${telefone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappURL, '_blank');
+  };
+
+  const handleEmail = (email, nome) => {
+    const subject = 'Contato comercial';
+    const body = `Olá ${nome},\n\nEsperamos que esteja bem. Gostaríamos de apresentar nossa solução que pode ajudar sua empresa.\n\nAguardamos seu retorno.`;
+    const mailtoURL = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(mailtoURL, '_blank');
+  };
+
+  const handleEditLead = (lead) => {
+    setEditingLead({ ...lead });
+    setSelectedLead(lead);
+  };
+
+  const handleSaveEditedLead = async () => {
+    try {
+      await updateLead(editingLead.id, editingLead);
+      setSelectedLead(null);
+      setEditingLead(null);
+    } catch (error) {
+      console.error('Erro ao salvar alterações:', error);
+      alert('Erro ao salvar alterações. Tente novamente.');
+    }
+  };
+
+  const handleEditInputChange = (field, value) => {
+    setEditingLead(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const updateLead = async (id, updatedLead) => {
+    const leadDoc = doc(db, 'leads', id);
+    await updateDoc(leadDoc, updatedLead);
+    setLeads(leads.map(lead => (lead.id === id ? { id, ...updatedLead } : lead)));
+  };
+
+  const deleteLead = async (id) => {
+    const lead = leads.find(l => l.id === id);
+    const confirmDelete = window.confirm(`Tem certeza que deseja excluir o lead "${lead?.nome}"?`);
+    
+    if (confirmDelete) {
+      try {
+        const leadDoc = doc(db, 'leads', id);
+        await deleteDoc(leadDoc);
+        setLeads(leads.filter(lead => lead.id !== id));
+      } catch (error) {
+        console.error('Erro ao excluir lead:', error);
+        alert('Erro ao excluir lead. Tente novamente.');
+      }
+    }
+  };
 
   // Filtrar leads
   const filteredLeads = leads.filter(lead => {
@@ -999,6 +1340,42 @@ function GestaoLeads() {
   return (
     <>
       <ModernCRMStyles />
+      {loading ? (
+        <div className="fade-in" style={{ padding: '2rem', textAlign: 'center' }}>
+          <div style={{ 
+            padding: '4rem', 
+            background: 'rgba(255, 255, 255, 0.85)', 
+            borderRadius: '16px',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
+          }}>
+            <div style={{ 
+              width: '3rem', 
+              height: '3rem', 
+              border: '3px solid #f3f4f6',
+              borderTop: '3px solid #2563eb',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite',
+              margin: '0 auto 1rem'
+            }}></div>
+            <p style={{ color: 'var(--secondary-text)' }}>Carregando...</p>
+          </div>
+        </div>
+      ) : !user ? (
+        <div className="fade-in" style={{ padding: '2rem', textAlign: 'center' }}>
+          <div style={{ 
+            padding: '4rem', 
+            background: 'rgba(255, 255, 255, 0.85)', 
+            borderRadius: '16px',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)'
+          }}>
+            <User size={48} style={{ color: 'var(--accent-red)', margin: '0 auto 1rem' }} />
+            <h2 style={{ color: 'var(--primary-text)', marginBottom: '1rem' }}>Acesso Negado</h2>
+            <p style={{ color: 'var(--secondary-text)' }}>
+              Você precisa estar logado para acessar a gestão de leads.
+            </p>
+          </div>
+        </div>
+      ) : (
       <div className="fade-in" style={{ padding: '2rem' }}>
         
         {/* Header Moderno */}
@@ -1014,7 +1391,10 @@ function GestaoLeads() {
             <button className="btn btn-secondary">
               <Upload size={16} /> Importar
             </button>
-            <button className="btn btn-primary">
+            <button className="btn btn-primary" onClick={() => {
+              console.log('Botão Novo Lead clicado');
+              setShowNewLeadModal(true);
+            }}>
               <Plus size={16} /> Novo Lead
             </button>
           </div>
@@ -1160,6 +1540,16 @@ function GestaoLeads() {
                   <div className="lead-details">
                     <h4>{lead.nome}</h4>
                     <p>{lead.empresa}</p>
+                    {lead.observacoes && (
+                      <div className="lead-observation">
+                        <small>💬 {lead.observacoes.substring(0, 60)}{lead.observacoes.length > 60 ? '...' : ''}</small>
+                      </div>
+                    )}
+                    {lead.proximaAcao && (
+                      <div className="lead-next-action">
+                        <small>📋 {lead.proximaAcao}</small>
+                      </div>
+                    )}
                   </div>
                 </div>
                 
@@ -1180,25 +1570,32 @@ function GestaoLeads() {
                 
                 <div className="action-buttons">
                   <button 
-                    className="action-btn primary" 
-                    onClick={(e) => { e.stopPropagation(); }}
-                    title="Ligar"
+                    className="action-btn whatsapp" 
+                    onClick={(e) => { e.stopPropagation(); handleWhatsApp(lead.telefone, lead.nome); }}
+                    title="WhatsApp"
                   >
-                    <Phone size={14} />
+                    <MessageSquare size={14} />
                   </button>
                   <button 
-                    className="action-btn secondary" 
-                    onClick={(e) => { e.stopPropagation(); }}
+                    className="action-btn email" 
+                    onClick={(e) => { e.stopPropagation(); handleEmail(lead.email, lead.nome); }}
                     title="Email"
                   >
                     <Mail size={14} />
                   </button>
                   <button 
-                    className="action-btn secondary" 
-                    onClick={(e) => { e.stopPropagation(); }}
-                    title="Mais opções"
+                    className="action-btn edit" 
+                    onClick={(e) => { e.stopPropagation(); handleEditLead(lead); }}
+                    title="Editar"
                   >
-                    <MoreVertical size={14} />
+                    <Edit size={14} />
+                  </button>
+                  <button 
+                    className="action-btn delete" 
+                    onClick={(e) => { e.stopPropagation(); deleteLead(lead.id); }}
+                    title="Excluir"
+                  >
+                    <Trash2 size={14} />
                   </button>
                 </div>
               </div>
@@ -1206,43 +1603,295 @@ function GestaoLeads() {
           </div>
         )}
 
-        {/* Modal de Detalhes */}
-        {selectedLead && (
-          <div className="modal-overlay" onClick={() => setSelectedLead(null)}>
+        {/* Modal de Novo Lead */}
+        {showNewLeadModal && (
+          <div className="modal-overlay" onClick={() => {
+            console.log('Fechando modal pelo overlay');
+            setShowNewLeadModal(false);
+          }}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
                 <div>
                   <h2 style={{ margin: '0 0 0.25rem 0', fontSize: '1.5rem', fontWeight: '600' }}>
-                    {selectedLead.nome}
+                    Novo Lead
                   </h2>
                   <p style={{ margin: 0, color: 'var(--secondary-text)' }}>
-                    {selectedLead.empresa}
+                    Adicione um novo lead ao seu pipeline
                   </p>
                 </div>
-                <button className="close-btn" onClick={() => setSelectedLead(null)}>
-                  ×
+                <button className="close-btn" onClick={() => {
+                  console.log('Fechando modal pelo X');
+                  setShowNewLeadModal(false);
+                }}>
+                  <X size={20} />
+                </button>
+              </div>
+
+              <form onSubmit={handleNewLeadSubmit}>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Nome *</label>
+                    <input 
+                      type="text" 
+                      className="form-input" 
+                      value={newLeadForm.nome}
+                      onChange={(e) => handleInputChange('nome', e.target.value)}
+                      required
+                      placeholder="Digite o nome do lead"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Empresa *</label>
+                    <input 
+                      type="text" 
+                      className="form-input" 
+                      value={newLeadForm.empresa}
+                      onChange={(e) => handleInputChange('empresa', e.target.value)}
+                      required
+                      placeholder="Digite o nome da empresa"
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">E-mail *</label>
+                    <input 
+                      type="email" 
+                      className="form-input" 
+                      value={newLeadForm.email}
+                      onChange={(e) => handleInputChange('email', e.target.value)}
+                      required
+                      placeholder="email@empresa.com"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Telefone</label>
+                    <input 
+                      type="tel" 
+                      className="form-input" 
+                      value={newLeadForm.telefone}
+                      onChange={(e) => handleInputChange('telefone', e.target.value)}
+                      placeholder="(11) 99999-9999"
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Origem</label>
+                    <select 
+                      className="form-input"
+                      value={newLeadForm.origem}
+                      onChange={(e) => handleInputChange('origem', e.target.value)}
+                    >
+                      <option value="Website">Website</option>
+                      <option value="LinkedIn">LinkedIn</option>
+                      <option value="Instagram">Instagram</option>
+                      <option value="Facebook">Facebook</option>
+                      <option value="Google Ads">Google Ads</option>
+                      <option value="Indicação">Indicação</option>
+                      <option value="Evento">Evento</option>
+                      <option value="Telemarketing">Telemarketing</option>
+                      <option value="Outro">Outro</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Status</label>
+                    <select 
+                      className="form-input"
+                      value={newLeadForm.status}
+                      onChange={(e) => handleInputChange('status', e.target.value)}
+                    >
+                      <option value="Novo">Novo</option>
+                      <option value="Contatado">Contatado</option>
+                      <option value="Qualificado">Qualificado</option>
+                      <option value="Não Qualificado">Não Qualificado</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label className="form-label">Pontuação (0-100)</label>
+                    <input 
+                      type="number" 
+                      className="form-input" 
+                      value={newLeadForm.pontuacao}
+                      onChange={(e) => handleInputChange('pontuacao', e.target.value ? parseInt(e.target.value) : 0)}
+                      min="0"
+                      max="100"
+                    />
+                    <div className="scoring-help">
+                      <h4>💡 Como pontuar seu lead:</h4>
+                      <div className="scoring-levels">
+                        <div className="scoring-level cold">
+                          <div>0-25 pts</div>
+                          <div>🧊 Frio</div>
+                        </div>
+                        <div className="scoring-level warm">
+                          <div>26-50 pts</div>
+                          <div>🔥 Morno</div>
+                        </div>
+                        <div className="scoring-level hot">
+                          <div>51-75 pts</div>
+                          <div>🌡️ Quente</div>
+                        </div>
+                        <div className="scoring-level qualified">
+                          <div>76-100 pts</div>
+                          <div>✨ Qualificado</div>
+                        </div>
+                      </div>
+                      <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.8rem', color: 'var(--secondary-text)' }}>
+                        <strong>Frio (0-25):</strong> Interesse baixo, precisa ser nutrido<br/>
+                        <strong>Morno (26-50):</strong> Demonstrou interesse inicial<br/>
+                        <strong>Quente (51-75):</strong> Interesse alto, pronto para contato<br/>
+                        <strong>Qualificado (76-100):</strong> Forte intenção de compra
+                      </p>
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Próxima Ação</label>
+                    <input 
+                      type="text" 
+                      className="form-input" 
+                      value={newLeadForm.proximaAcao}
+                      onChange={(e) => handleInputChange('proximaAcao', e.target.value)}
+                      placeholder="Ex: Ligar na segunda-feira"
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Observações</label>
+                  <textarea 
+                    className="form-textarea" 
+                    rows="3"
+                    value={newLeadForm.observacoes}
+                    onChange={(e) => handleInputChange('observacoes', e.target.value)}
+                    placeholder="Adicione observações sobre o lead..."
+                  ></textarea>
+                </div>
+
+                <div className="modal-actions">
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary" 
+                    onClick={() => {
+                      console.log('Botão Cancelar clicado');
+                      setShowNewLeadModal(false);
+                    }}
+                  >
+                    Cancelar
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="btn btn-primary"
+                    onClick={() => console.log('Botão Criar Lead clicado')}
+                  >
+                    <Plus size={16} /> Criar Lead
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Detalhes */}
+        {selectedLead && (
+          <div className="modal-overlay" onClick={() => { setSelectedLead(null); setEditingLead(null); }}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <div>
+                  <h2 style={{ margin: '0 0 0.25rem 0', fontSize: '1.5rem', fontWeight: '600' }}>
+                    {editingLead ? 'Editar Lead' : selectedLead.nome}
+                  </h2>
+                  <p style={{ margin: 0, color: 'var(--secondary-text)' }}>
+                    {editingLead ? 'Modifique as informações do lead' : selectedLead.empresa}
+                  </p>
+                </div>
+                <button className="close-btn" onClick={() => { setSelectedLead(null); setEditingLead(null); }}>
+                  <X size={20} />
                 </button>
               </div>
 
               <div className="form-row">
                 <div className="form-group">
+                  <label className="form-label">Nome</label>
+                  <input 
+                    type="text" 
+                    className="form-input" 
+                    value={editingLead ? editingLead.nome : selectedLead.nome}
+                    onChange={(e) => editingLead && handleEditInputChange('nome', e.target.value)}
+                    readOnly={!editingLead}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Empresa</label>
+                  <input 
+                    type="text" 
+                    className="form-input" 
+                    value={editingLead ? editingLead.empresa : selectedLead.empresa}
+                    onChange={(e) => editingLead && handleEditInputChange('empresa', e.target.value)}
+                    readOnly={!editingLead}
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
                   <label className="form-label">E-mail</label>
-                  <input type="email" className="form-input" value={selectedLead.email} readOnly />
+                  <input 
+                    type="email" 
+                    className="form-input" 
+                    value={editingLead ? editingLead.email : selectedLead.email}
+                    onChange={(e) => editingLead && handleEditInputChange('email', e.target.value)}
+                    readOnly={!editingLead}
+                  />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Telefone</label>
-                  <input type="tel" className="form-input" value={selectedLead.telefone} readOnly />
+                  <input 
+                    type="tel" 
+                    className="form-input" 
+                    value={editingLead ? editingLead.telefone : selectedLead.telefone}
+                    onChange={(e) => editingLead && handleEditInputChange('telefone', e.target.value)}
+                    readOnly={!editingLead}
+                  />
                 </div>
               </div>
 
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">Origem</label>
-                  <input type="text" className="form-input" value={selectedLead.origem} readOnly />
+                  {editingLead ? (
+                    <select 
+                      className="form-input"
+                      value={editingLead.origem}
+                      onChange={(e) => handleEditInputChange('origem', e.target.value)}
+                    >
+                      <option value="Website">Website</option>
+                      <option value="LinkedIn">LinkedIn</option>
+                      <option value="Instagram">Instagram</option>
+                      <option value="Facebook">Facebook</option>
+                      <option value="Google Ads">Google Ads</option>
+                      <option value="Indicação">Indicação</option>
+                      <option value="Evento">Evento</option>
+                      <option value="Telemarketing">Telemarketing</option>
+                      <option value="Outro">Outro</option>
+                    </select>
+                  ) : (
+                    <input type="text" className="form-input" value={selectedLead.origem} readOnly />
+                  )}
                 </div>
                 <div className="form-group">
                   <label className="form-label">Status</label>
-                  <select className="form-input">
+                  <select 
+                    className="form-input"
+                    value={editingLead ? editingLead.status : selectedLead.status}
+                    onChange={(e) => editingLead && handleEditInputChange('status', e.target.value)}
+                    disabled={!editingLead}
+                  >
                     <option value="Novo">Novo</option>
                     <option value="Contatado">Contatado</option>
                     <option value="Qualificado">Qualificado</option>
@@ -1254,17 +1903,36 @@ function GestaoLeads() {
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">Pontuação</label>
-                  <input type="number" className="form-input" value={selectedLead.pontuacao} />
+                  <input 
+                    type="number" 
+                    className="form-input" 
+                    value={editingLead ? editingLead.pontuacao : selectedLead.pontuacao}
+                    onChange={(e) => editingLead && handleEditInputChange('pontuacao', parseInt(e.target.value))}
+                    readOnly={!editingLead}
+                    min="0"
+                    max="100"
+                  />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Tentativas</label>
-                  <input type="number" className="form-input" value={selectedLead.tentativas} readOnly />
+                  <input 
+                    type="number" 
+                    className="form-input" 
+                    value={editingLead ? editingLead.tentativas : selectedLead.tentativas || 0}
+                    readOnly
+                  />
                 </div>
               </div>
 
               <div className="form-group">
                 <label className="form-label">Próxima Ação</label>
-                <input type="text" className="form-input" value={selectedLead.proximaAcao} />
+                <input 
+                  type="text" 
+                  className="form-input" 
+                  value={editingLead ? editingLead.proximaAcao : selectedLead.proximaAcao}
+                  onChange={(e) => editingLead && handleEditInputChange('proximaAcao', e.target.value)}
+                  readOnly={!editingLead}
+                />
               </div>
 
               <div className="form-group">
@@ -1272,33 +1940,36 @@ function GestaoLeads() {
                 <textarea 
                   className="form-textarea" 
                   rows="4"
-                  value={selectedLead.observacoes}
-                  readOnly
-                ></textarea>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Adicionar Nova Observação</label>
-                <textarea 
-                  className="form-textarea" 
-                  rows="3"
-                  placeholder="Digite sua observação..."
+                  value={editingLead ? editingLead.observacoes : selectedLead.observacoes}
+                  onChange={(e) => editingLead && handleEditInputChange('observacoes', e.target.value)}
+                  readOnly={!editingLead}
+                  placeholder={editingLead ? "Adicione observações sobre o lead..." : ""}
                 ></textarea>
               </div>
 
               <div className="modal-actions">
-                <button className="btn btn-secondary" onClick={() => setSelectedLead(null)}>
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={() => { setSelectedLead(null); setEditingLead(null); }}
+                >
                   Cancelar
                 </button>
-                <button className="btn btn-primary">
-                  <CheckCircle size={16} /> Salvar Alterações
-                </button>
+                {editingLead ? (
+                  <button className="btn btn-primary" onClick={handleSaveEditedLead}>
+                    <CheckCircle size={16} /> Salvar Alterações
+                  </button>
+                ) : (
+                  <button className="btn btn-primary" onClick={() => setEditingLead({ ...selectedLead })}>
+                    <Edit size={16} /> Editar Lead
+                  </button>
+                )}
               </div>
             </div>
           </div>
         )}
 
       </div>
+      )}
     </>
   );
 }

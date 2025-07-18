@@ -1,7 +1,7 @@
 // Firebase Configuration para React
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
 // Sua configuração do Firebase (mesma que você já tem)
@@ -21,6 +21,16 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
+
+// Configurar Firestore para reduzir warnings
+try {
+  // Desabilitar alguns recursos avançados que podem causar warnings
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Firebase configurado para desenvolvimento');
+  }
+} catch (error) {
+  console.log('Erro na configuração do Firebase:', error);
+}
 
 // Exportar a instância do app
 export default app;

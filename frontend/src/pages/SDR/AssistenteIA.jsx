@@ -8,104 +8,11 @@ function AssistenteIA() {
   const [selectedFunnel, setSelectedFunnel] = useState('Primeiro Contato');
   const [selectedSegment, setSelectedSegment] = useState('Tecnologia');
   const [chatMessage, setChatMessage] = useState('');
-  const [chatMessages, setChatMessages] = useState([
-    {
-      type: 'user',
-      text: 'Olá! Como posso guiá-lo com suas qualificações hoje?'
-    },
-    {
-      type: 'ai',
-      text: 'Ótimo! Para a TechStart, sugiro focar em perguntas sobre escalabilidade e automação. Eles estão em crescimento rápido...'
-    }
-  ]);
+  const [chatMessages, setChatMessages] = useState([]);
 
-  const topCards = [
-    {
-      icon: Lightbulb,
-      title: 'Assistente de Qualificação',
-      subtitle: 'Sugestões inteligentes de perguntas e identificação de red flags',
-      buttonText: 'Ativar Assistente',
-      buttonColor: 'bg-yellow-500 hover:bg-yellow-600 text-white',
-      iconColor: 'text-yellow-500',
-      iconBg: 'bg-yellow-50'
-    },
-    {
-      icon: MessageSquare,
-      title: 'Gerador de Mensagens',
-      subtitle: 'E-mails, scripts e mensagens personalizadas por contexto',
-      buttonText: 'Gerar Mensagem',
-      buttonColor: 'bg-blue-500 hover:bg-blue-600 text-white',
-      iconColor: 'text-blue-500',
-      iconBg: 'bg-blue-50'
-    },
-    {
-      icon: Target,
-      title: 'Batedor de Metas',
-      subtitle: 'Acompanhe e otimize seu desempenho para alcançar suas metas de vendas',
-      buttonText: 'Iniciar Análise',
-      buttonColor: 'bg-purple-500 hover:bg-purple-600 text-white',
-      iconColor: 'text-purple-500',
-      iconBg: 'bg-purple-50'
-    },
-    {
-      icon: Mail,
-      title: 'Gerador de E-mails',
-      subtitle: 'Crie e-mails personalizados para prospecção, follow-up e relacionamento com clientes.',
-      buttonText: 'Explorar Recurso',
-      buttonColor: 'bg-green-500 hover:bg-green-600 text-white',
-      iconColor: 'text-green-600',
-      iconBg: 'bg-green-50'
-    },
-    {
-      icon: Bot,
-      title: 'Ideias para Qualificação',
-      subtitle: 'Receba sugestões de perguntas estratégicas para qualificar melhor seus leads.',
-      buttonText: 'Explorar Recurso',
-      buttonColor: 'bg-indigo-500 hover:bg-indigo-600 text-white',
-      iconColor: 'text-indigo-600',
-      iconBg: 'bg-indigo-50'
-    },
-    {
-      icon: Phone,
-      title: 'Scripts de Ligação',
-      subtitle: 'Gere scripts personalizados e persuasivos para suas ligações comerciais.',
-      buttonText: 'Explorar Recurso',
-      buttonColor: 'bg-emerald-500 hover:bg-emerald-600 text-white',
-      iconColor: 'text-emerald-600',
-      iconBg: 'bg-emerald-50'
-    }
-  ];
+  const topCards = [];
 
-  const suggestions = [
-    {
-      icon: CheckCircle,
-      iconColor: 'text-blue-500',
-      title: 'Pergunta de descoberta',
-      subtitle: 'Qual é o maior desafio que vocês enfrentam atualmente com o processo manual?',
-      actions: ['Ver', 'Baixar']
-    },
-    {
-      icon: Lightbulb,
-      iconColor: 'text-yellow-500',
-      title: 'Script para TechStart',
-      subtitle: 'Olá Carlos, vi que a TechStart está crescendo rapidamente. Como vocês estão gerenciando...',
-      actions: ['Ver', 'Baixar']
-    },
-    {
-      icon: Mail,
-      iconColor: 'text-green-500',
-      title: 'E-mail de follow-up',
-      subtitle: 'Assunto: Próximos passos para otimizar seus processos...',
-      actions: ['Ver', 'Baixar']
-    },
-    {
-      icon: AlertCircle,
-      iconColor: 'text-red-500',
-      title: 'Resposta para objeção',
-      subtitle: 'Entendo sua preocupação com o tempo de implementação. Na verdade...',
-      actions: ['Ver', 'Baixar']
-    }
-  ];
+  const suggestions = [];
 
   const funnelOptions = ['Primeiro Contato', 'Qualificação', 'Proposta', 'Fechamento'];
   const segmentOptions = ['Tecnologia', 'Saúde', 'Educação', 'Financeiro'];
@@ -258,7 +165,7 @@ function AssistenteIA() {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .ai-assistant-container {
           padding: 2rem;
           background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);

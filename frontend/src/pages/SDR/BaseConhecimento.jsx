@@ -17,176 +17,13 @@ function BaseConhecimento() {
   const [expandedSections, setExpandedSections] = useState({});
 
   // Dados dos vídeos de treinamento
-  const videosData = [
-    {
-      id: 1,
-      title: 'Técnicas de Cold Call',
-      duration: '12:30',
-      views: 1250,
-      type: 'video',
-      category: 'Vendas',
-      difficulty: 'Intermediário',
-      rating: 4.8,
-      description: 'Aprenda as melhores técnicas para abordar prospects frios e converter em oportunidades',
-      tags: ['cold-call', 'vendas', 'prospecção'],
-      thumbnail: '🎯',
-      author: 'Maria Silva',
-      dateAdded: '2024-07-10',
-      isFavorite: false
-    },
-    {
-      id: 2,
-      title: 'Qualificação Efetiva',
-      duration: '18:45',
-      views: 980,
-      type: 'video',
-      category: 'Qualificação',
-      difficulty: 'Avançado',
-      rating: 4.9,
-      description: 'Metodologias avançadas para qualificar leads de forma efetiva e assertiva',
-      tags: ['qualificação', 'BANT', 'metodologia'],
-      thumbnail: '✅',
-      author: 'João Santos',
-      dateAdded: '2024-07-08',
-      isFavorite: true
-    },
-    {
-      id: 3,
-      title: 'Uso do CRM',
-      duration: '8:20',
-      views: 1450,
-      type: 'video',
-      category: 'Ferramentas',
-      difficulty: 'Básico',
-      rating: 4.7,
-      description: 'Como utilizar o CRM de forma eficiente para gerenciar seus leads e oportunidades',
-      tags: ['CRM', 'gestão', 'produtividade'],
-      thumbnail: '⚙️',
-      author: 'Ana Costa',
-      dateAdded: '2024-07-05',
-      isFavorite: false
-    },
-    {
-      id: 4,
-      title: 'Objeções e Respostas',
-      duration: '15:10',
-      views: 1100,
-      type: 'video',
-      category: 'Vendas',
-      difficulty: 'Intermediário',
-      rating: 4.6,
-      description: 'Estratégias para lidar com as principais objeções durante o processo de vendas',
-      tags: ['objeções', 'argumentação', 'fechamento'],
-      thumbnail: '🛡️',
-      author: 'Carlos Oliveira',
-      dateAdded: '2024-07-03',
-      isFavorite: false
-    }
-  ];
+  const videosData = [];
 
   // Dados dos guias e artigos
-  const guidesData = [
-    {
-      id: 5,
-      title: 'Guia de Qualificação BANT',
-      type: 'guide',
-      category: 'Qualificação',
-      difficulty: 'Intermediário',
-      readTime: '15 min',
-      rating: 4.9,
-      description: 'Como aplicar a metodologia BANT para qualificar prospects de forma efetiva',
-      tags: ['BANT', 'qualificação', 'metodologia'],
-      icon: '📋',
-      author: 'Equipe de Vendas',
-      dateAdded: '2024-07-12',
-      isFavorite: true
-    },
-    {
-      id: 6,
-      title: 'Scripts de Cold Call',
-      type: 'script',
-      category: 'Vendas',
-      difficulty: 'Básico',
-      readTime: '5 min',
-      rating: 4.7,
-      description: 'Templates para diferentes segmentos e situações de cold calling',
-      tags: ['scripts', 'cold-call', 'templates'],
-      icon: '📞',
-      author: 'Maria Silva',
-      dateAdded: '2024-07-11',
-      isFavorite: false
-    },
-    {
-      id: 7,
-      title: 'Objeções Mais Comuns',
-      type: 'document',
-      category: 'Vendas',
-      difficulty: 'Intermediário',
-      readTime: '10 min',
-      rating: 4.8,
-      description: 'Como lidar com as principais objeções no processo de vendas',
-      tags: ['objeções', 'argumentação', 'vendas'],
-      icon: '📊',
-      author: 'Carlos Oliveira',
-      dateAdded: '2024-07-09',
-      isFavorite: false
-    },
-    {
-      id: 8,
-      title: 'Treinamento SPIN Selling',
-      type: 'course',
-      category: 'Metodologia',
-      difficulty: 'Avançado',
-      readTime: '25 min',
-      rating: 4.9,
-      description: 'Técnicas de questionamento baseadas na metodologia SPIN',
-      tags: ['SPIN', 'questionamento', 'metodologia'],
-      icon: '🎓',
-      author: 'Instituto de Vendas',
-      dateAdded: '2024-07-07',
-      isFavorite: true
-    }
-  ];
+  const guidesData = [];
 
   // Dados das ferramentas e recursos
-  const toolsData = [
-    {
-      id: 9,
-      title: 'Calculadora de ROI',
-      type: 'tool',
-      category: 'Ferramentas',
-      description: 'Ferramenta para calcular o retorno de investimento para prospects',
-      icon: '🧮',
-      isExternal: false
-    },
-    {
-      id: 10,
-      title: 'Gerador de Emails',
-      type: 'tool',
-      category: 'Automação',
-      description: 'Crie emails personalizados com templates inteligentes',
-      icon: '✉️',
-      isExternal: false
-    },
-    {
-      id: 11,
-      title: 'Análise de Competidores',
-      type: 'tool',
-      category: 'Pesquisa',
-      description: 'Dashboard para analisar concorrentes e posicionamento',
-      icon: '📈',
-      isExternal: false
-    },
-    {
-      id: 12,
-      title: 'Central de Perguntas',
-      type: 'qa',
-      category: 'Suporte',
-      description: 'Tire suas dúvidas com nossa base de perguntas frequentes',
-      icon: '❓',
-      isExternal: false
-    }
-  ];
+  const toolsData = [];
 
   // Combinar todos os dados
   const allContent = [...videosData, ...guidesData, ...toolsData];
@@ -691,7 +528,7 @@ function BaseConhecimento() {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .base-conhecimento-page {
           padding: 2rem;
           background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
