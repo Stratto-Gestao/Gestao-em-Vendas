@@ -373,21 +373,35 @@ const GestaoNegocios = () => {
     }
   }, []);
 
+  // useEffect para sincronizar com localStorage apenas quando necessário
   useEffect(() => {
+    // Só salva no localStorage se não estiver no processo de carregamento inicial
     if (negocios.length > 0) {
-      localStorage.setItem('negocios', JSON.stringify(negocios));
+      const timeoutId = setTimeout(() => {
+        localStorage.setItem('negocios', JSON.stringify(negocios));
+      }, 100); // Debounce para evitar salvamentos excessivos
+      
+      return () => clearTimeout(timeoutId);
     }
   }, [negocios]);
 
   useEffect(() => {
     if (notas.length > 0) {
-      localStorage.setItem('notas', JSON.stringify(notas));
+      const timeoutId = setTimeout(() => {
+        localStorage.setItem('notas', JSON.stringify(notas));
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
     }
   }, [notas]);
 
   useEffect(() => {
     if (atividadesRecentes.length > 0) {
-      localStorage.setItem('atividades', JSON.stringify(atividadesRecentes));
+      const timeoutId = setTimeout(() => {
+        localStorage.setItem('atividades', JSON.stringify(atividadesRecentes));
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
     }
   }, [atividadesRecentes]);
 
@@ -486,7 +500,7 @@ const GestaoNegocios = () => {
   };
 
   // Funções para gerenciar negócios
-  const handleNewDealSubmit = (e) => {
+  const handleNewDealSubmit = async (e) => {
     e.preventDefault();
     
     if (!newDealForm.titulo || !newDealForm.cliente || !newDealForm.contato || !newDealForm.valor) {
@@ -498,7 +512,6 @@ const GestaoNegocios = () => {
       id: Date.now(),
       ...newDealForm,
       valor: parseFloat(newDealForm.valor),
-
       dataCriacao: new Date().toISOString(),
       ultimaAtualizacao: new Date().toISOString(),
       avatar: newDealForm.empresa ? newDealForm.empresa.substring(0, 2).toUpperCase() : 'NN',
@@ -508,50 +521,87 @@ const GestaoNegocios = () => {
       motivos: []
     };
 
-    setNegocios(prev => [...prev, novoDeal]);
-    setNewDealForm({
-      titulo: '',
-      cliente: '',
-      contato: '',
-      valor: '',
-      probabilidade: 50,
-      estagio: 'Qualificação',
-      responsavel: 'Ana Costa',
-      dataFechamento: '',
-      origem: 'Website',
-      prioridade: 'Média',
-      email: '',
-      telefone: '',
-      empresa: '',
-      segmento: '',
-      website: '',
-      endereco: '',
-      observacoes: '',
-      proximaAcao: '',
-      tag: 'Novo',
-      concorrentes: [],
-      motivos: []
-    });
-    setShowNewDealModal(false);
-    alert('Novo negócio criado com sucesso!');
+    try {
+      // 1. Salva no Firebase primeiro
+      try {
+        await addDoc(collection(db, 'negocios'), novoDeal);
+        console.log('Negócio salvo no Firebase');
+      } catch (firebaseError) {
+        console.log('Erro ao salvar no Firebase (continuando localmente):', firebaseError);
+      }
+
+      // 2. Atualiza estado local
+      const negociosAtualizados = [...negocios, novoDeal];
+      setNegocios(negociosAtualizados);
+      
+      // 3. Atualiza localStorage imediatamente
+      localStorage.setItem('negocios', JSON.stringify(negociosAtualizados));
+      
+      // 4. Limpa formulário
+      setNewDealForm({
+        titulo: '',
+        cliente: '',
+        contato: '',
+        valor: '',
+        probabilidade: 50,
+        estagio: 'Qualificação',
+        responsavel: 'Ana Costa',
+        dataFechamento: '',
+        origem: 'Website',
+        prioridade: 'Média',
+        email: '',
+        telefone: '',
+        empresa: '',
+        segmento: '',
+        website: '',
+        endereco: '',
+        observacoes: '',
+        proximaAcao: '',
+        tag: 'Novo',
+        concorrentes: [],
+        motivos: []
+      });
+      
+      setShowNewDealModal(false);
+      alert('Novo negócio criado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao criar negócio:', error);
+      alert('Erro ao criar negócio. Tente novamente.');
+    }
   };
 
   const handleDeleteDeal = async (dealId) => {
     if (window.confirm('Tem certeza que deseja excluir este negócio? Esta ação não pode ser desfeita.')) {
       try {
-        // Remove do estado local
-        setNegocios(prev => prev.filter(deal => deal.id !== dealId));
+        // 1. Remove do Firebase primeiro
+        try {
+          await deleteDoc(doc(db, 'negocios', dealId.toString()));
+          console.log('Negócio excluído do Firebase');
+        } catch (firebaseError) {
+          console.log('Erro ao excluir do Firebase (pode não existir):', firebaseError);
+        }
+
+        // 2. Remove do estado local
+        const negociosAtualizados = negocios.filter(deal => deal.id !== dealId);
+        setNegocios(negociosAtualizados);
         
-        // Remove notas relacionadas
-        setNotas(prev => prev.filter(nota => nota.negocioId !== dealId));
+        // 3. Remove notas relacionadas
+        const notasAtualizadas = notas.filter(nota => nota.negocioId !== dealId);
+        setNotas(notasAtualizadas);
         
-        // Remove atividades relacionadas
-        setAtividadesRecentes(prev => prev.filter(atividade => {
-          const negocioTitulo = negocios.find(n => n.id === dealId)?.titulo;
+        // 4. Remove atividades relacionadas
+        const negocioTitulo = negocios.find(n => n.id === dealId)?.titulo;
+        const atividadesAtualizadas = atividadesRecentes.filter(atividade => {
           return atividade.negocio !== negocioTitulo;
-        }));
+        });
+        setAtividadesRecentes(atividadesAtualizadas);
         
-        // Fecha o modal se estiver aberto
+        // 5. Atualiza localStorage imediatamente
+        localStorage.setItem('negocios', JSON.stringify(negociosAtualizados));
+        localStorage.setItem('notas', JSON.stringify(notasAtualizadas));
+        localStorage.setItem('atividades', JSON.stringify(atividadesAtualizadas));
+        
+        // 6. Fecha o modal se estiver aberto
         if (selectedDeal && selectedDeal.id === dealId) {
           setSelectedDeal(null);
         }
@@ -677,7 +727,7 @@ const GestaoNegocios = () => {
     }
   };
 
-  const handleAddNote = () => {
+  const handleAddNote = async () => {
     if (!newNoteText.trim()) return;
     
     const novaNota = {
@@ -688,45 +738,146 @@ const GestaoNegocios = () => {
       negocioId: selectedDeal.id
     };
     
-    setNotas(prev => [...prev, novaNota]);
-    setNewNoteText('');
-    alert('Nota adicionada com sucesso!');
+    try {
+      // 1. Salva no Firebase primeiro
+      try {
+        await addDoc(collection(db, 'notas'), novaNota);
+        console.log('Nota salva no Firebase');
+      } catch (firebaseError) {
+        console.log('Erro ao salvar nota no Firebase (continuando localmente):', firebaseError);
+      }
+
+      // 2. Atualiza estado local
+      const notasAtualizadas = [...notas, novaNota];
+      setNotas(notasAtualizadas);
+      
+      // 3. Atualiza localStorage imediatamente
+      localStorage.setItem('notas', JSON.stringify(notasAtualizadas));
+      
+      setNewNoteText('');
+      alert('Nota adicionada com sucesso!');
+    } catch (error) {
+      console.error('Erro ao adicionar nota:', error);
+      alert('Erro ao adicionar nota. Tente novamente.');
+    }
   };
 
-  const handleEditNote = (noteId) => {
+  const handleEditNote = async (noteId) => {
     const note = notas.find(n => n.id === noteId);
     if (note) {
       const newContent = prompt('Editar nota:', note.conteudo);
       if (newContent !== null) {
-        setNotas(prev => prev.map(n => 
-          n.id === noteId ? { ...n, conteudo: newContent } : n
-        ));
-        alert('Nota editada com sucesso!');
+        try {
+          // 1. Atualiza no Firebase primeiro
+          try {
+            await updateDoc(doc(db, 'notas', noteId.toString()), {
+              conteudo: newContent
+            });
+            console.log('Nota atualizada no Firebase');
+          } catch (firebaseError) {
+            console.log('Erro ao atualizar nota no Firebase (continuando localmente):', firebaseError);
+          }
+
+          // 2. Atualiza estado local
+          const notasAtualizadas = notas.map(n => 
+            n.id === noteId ? { ...n, conteudo: newContent } : n
+          );
+          setNotas(notasAtualizadas);
+          
+          // 3. Atualiza localStorage imediatamente
+          localStorage.setItem('notas', JSON.stringify(notasAtualizadas));
+          
+          alert('Nota editada com sucesso!');
+        } catch (error) {
+          console.error('Erro ao editar nota:', error);
+          alert('Erro ao editar nota. Tente novamente.');
+        }
       }
     }
   };
 
-  const handleDeleteNote = (noteId) => {
+  const handleDeleteNote = async (noteId) => {
     if (window.confirm('Tem certeza que deseja excluir esta nota?')) {
-      setNotas(prev => prev.filter(n => n.id !== noteId));
-      alert('Nota excluída com sucesso!');
+      try {
+        // 1. Remove do Firebase primeiro
+        try {
+          await deleteDoc(doc(db, 'notas', noteId.toString()));
+          console.log('Nota excluída do Firebase');
+        } catch (firebaseError) {
+          console.log('Erro ao excluir nota do Firebase (pode não existir):', firebaseError);
+        }
+
+        // 2. Remove do estado local
+        const notasAtualizadas = notas.filter(n => n.id !== noteId);
+        setNotas(notasAtualizadas);
+        
+        // 3. Atualiza localStorage imediatamente
+        localStorage.setItem('notas', JSON.stringify(notasAtualizadas));
+        
+        alert('Nota excluída com sucesso!');
+      } catch (error) {
+        console.error('Erro ao excluir nota:', error);
+        alert('Erro ao excluir nota. Tente novamente.');
+      }
     }
   };
 
-  const handleUpdateDealStage = (dealId, newStage) => {
-    setNegocios(prev => prev.map(deal => 
-      deal.id === dealId 
-        ? { ...deal, estagio: newStage, ultimaAtualizacao: new Date().toISOString() }
-        : deal
-    ));
+  const handleUpdateDealStage = async (dealId, newStage) => {
+    try {
+      // 1. Atualiza no Firebase primeiro
+      try {
+        await updateDoc(doc(db, 'negocios', dealId.toString()), {
+          estagio: newStage,
+          ultimaAtualizacao: new Date().toISOString()
+        });
+        console.log('Estágio atualizado no Firebase');
+      } catch (firebaseError) {
+        console.log('Erro ao atualizar no Firebase (continuando localmente):', firebaseError);
+      }
+
+      // 2. Atualiza estado local
+      const negociosAtualizados = negocios.map(deal => 
+        deal.id === dealId 
+          ? { ...deal, estagio: newStage, ultimaAtualizacao: new Date().toISOString() }
+          : deal
+      );
+      setNegocios(negociosAtualizados);
+      
+      // 3. Atualiza localStorage imediatamente
+      localStorage.setItem('negocios', JSON.stringify(negociosAtualizados));
+      
+    } catch (error) {
+      console.error('Erro ao atualizar estágio:', error);
+    }
   };
 
-  const handleUpdateDealProbability = (dealId, newProbability) => {
-    setNegocios(prev => prev.map(deal => 
-      deal.id === dealId 
-        ? { ...deal, probabilidade: newProbability, ultimaAtualizacao: new Date().toISOString() }
-        : deal
-    ));
+  const handleUpdateDealProbability = async (dealId, newProbability) => {
+    try {
+      // 1. Atualiza no Firebase primeiro
+      try {
+        await updateDoc(doc(db, 'negocios', dealId.toString()), {
+          probabilidade: newProbability,
+          ultimaAtualizacao: new Date().toISOString()
+        });
+        console.log('Probabilidade atualizada no Firebase');
+      } catch (firebaseError) {
+        console.log('Erro ao atualizar no Firebase (continuando localmente):', firebaseError);
+      }
+
+      // 2. Atualiza estado local
+      const negociosAtualizados = negocios.map(deal => 
+        deal.id === dealId 
+          ? { ...deal, probabilidade: newProbability, ultimaAtualizacao: new Date().toISOString() }
+          : deal
+      );
+      setNegocios(negociosAtualizados);
+      
+      // 3. Atualiza localStorage imediatamente
+      localStorage.setItem('negocios', JSON.stringify(negociosAtualizados));
+      
+    } catch (error) {
+      console.error('Erro ao atualizar probabilidade:', error);
+    }
   };
 
   const handleDuplicateDeal = (deal) => {
