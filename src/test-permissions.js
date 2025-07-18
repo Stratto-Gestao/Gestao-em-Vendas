@@ -19,7 +19,7 @@
  * Sub-páginas do SDR:
  * - PainelPrincipal
  * - GestaoLeads
- * - Qualificacao
+// * - Qualificacao
  * - AssistenteIA
  * - PassagemVendas
  * - AnalisePerformance

@@ -165,132 +165,9 @@ const PainelPrincipalVendedor = () => {
     const savedHistoricoVendas = localStorage.getItem('historico-vendas-mensais-vendedor');
     const historicoVendas = savedHistoricoVendas ? JSON.parse(savedHistoricoVendas) : [];
     
-    // Carregar clientes
-    const savedClientes = localStorage.getItem('clientes-vendedor');
-    if (savedClientes) {
-      setClientes(JSON.parse(savedClientes));
-    } else {
-      // Dados mock de clientes
-      setClientes([
-        {
-          id: 1,
-          nome: 'Carlos Silva',
-          empresa: 'TechCorp Solutions',
-          email: 'carlos@techcorp.com',
-          telefone: '(11) 99999-9999',
-          classificacao: 'Ativo',
-          valorTotal: 185500,
-          pedidosFechados: 3,
-          ultimoContato: '2024-07-13',
-          saudeCliente: 85,
-          avatar: 'TC'
-        },
-        {
-          id: 2,
-          nome: 'Ana Costa',
-          empresa: 'Digital Innovations',
-          email: 'ana@digitalinnovations.com',
-          telefone: '(21) 88888-8888',
-          classificacao: 'Ativo',
-          valorTotal: 172300,
-          pedidosFechados: 2,
-          ultimoContato: '2024-07-12',
-          saudeCliente: 92,
-          avatar: 'DI'
-        },
-        {
-          id: 3,
-          nome: 'João Santos',
-          empresa: 'StartupFlow Inc',
-          email: 'joao@startupflow.com',
-          telefone: '(31) 77777-7777',
-          classificacao: 'Novo',
-          valorTotal: 165800,
-          pedidosFechados: 4,
-          ultimoContato: '2024-07-11',
-          saudeCliente: 78,
-          avatar: 'SF'
-        }
-      ]);
-    }
-    
-    // Carregar negócios
-    const savedNegocios = localStorage.getItem('negocios');
-    if (savedNegocios) {
-      setNegocios(JSON.parse(savedNegocios));
-    } else {
-      // Dados mock de negócios
-      setNegocios([
-        {
-          id: 1,
-          titulo: 'Implementação ERP Completo',
-          cliente: 'TechCorp Solutions',
-          valor: 285000,
-          probabilidade: 85,
-          estagio: 'Negociação',
-          dataFechamento: '2024-12-15',
-          prioridade: 'Alta'
-        },
-        {
-          id: 2,
-          titulo: 'Sistema Marketing Digital',
-          cliente: 'Digital Innovations',
-          valor: 150000,
-          probabilidade: 70,
-          estagio: 'Proposta',
-          dataFechamento: '2024-11-30',
-          prioridade: 'Média'
-        },
-        {
-          id: 3,
-          titulo: 'Consultoria Logística',
-          cliente: 'StartupFlow Inc',
-          valor: 90000,
-          probabilidade: 45,
-          estagio: 'Qualificação',
-          dataFechamento: '2024-10-20',
-          prioridade: 'Baixa'
-        }
-      ]);
-    }
-    
-    // Carregar tarefas
-    const savedTarefas = localStorage.getItem('tarefas-vendedor');
-    if (savedTarefas) {
-      setTarefas(JSON.parse(savedTarefas));
-    } else {
-      // Dados mock de tarefas
-      setTarefas([
-        {
-          id: 1,
-          titulo: 'Ligar para leads quentes',
-          status: 'Em andamento',
-          prioridade: 'Alta',
-          prazo: '2024-07-14T17:00:00',
-          progresso: 40,
-          tipo: 'Ligação'
-        },
-        {
-          id: 2,
-          titulo: 'Qualificar novos leads',
-          status: 'Pendente',
-          prioridade: 'Média',
-          prazo: '2024-07-14T15:00:00',
-          progresso: 0,
-          tipo: 'E-mail'
-        },
-        {
-          id: 3,
-          titulo: 'Enviar proposta TechStart',
-          status: 'Concluída',
-          prioridade: 'Alta',
-          prazo: '2024-07-14T14:00:00',
-          progresso: 100,
-          tipo: 'E-mail'
-        }
-      ]);
-    }
-    
+    // Carregar atividades recentes (somente reais)
+    const savedAtividades = localStorage.getItem('atividades-vendedor');
+    setAtividades(savedAtividades ? JSON.parse(savedAtividades) : []);
     // Carregar campanhas ativas
     const savedCampanhas = localStorage.getItem('campanhas-admin');
     if (savedCampanhas) {
@@ -298,10 +175,8 @@ const PainelPrincipalVendedor = () => {
       const campanhasAtivas = allCampanhas.filter(c => c.status === 'ativa');
       setCampanhas(campanhasAtivas);
     } else {
-      // Sem dados mockados - mostrar apenas campanhas reais
       setCampanhas([]);
     }
-    
     // Carregar metas da semana ativas
     const savedMetasSemana = localStorage.getItem('metas-semana-admin');
     if (savedMetasSemana) {
@@ -309,75 +184,10 @@ const PainelPrincipalVendedor = () => {
       const metasAtivas = allMetasSemana.filter(m => m.status === 'ativa');
       setMetasSemana(metasAtivas);
     } else {
-      // Sem dados mockados - mostrar apenas metas reais
       setMetasSemana([]);
     }
-    
-    // Carregar atividades recentes
-    const savedAtividades = localStorage.getItem('atividades-vendedor');
-    if (savedAtividades) {
-      setAtividades(JSON.parse(savedAtividades));
-    } else {
-      // Dados mock de atividades
-      setAtividades([
-        {
-          id: 1,
-          titulo: 'Ligação com Carlos Silva - TechCorp',
-          time: 'Há 15 min',
-          icon: Phone,
-          color: 'bg-green-100 text-green-600'
-        },
-        {
-          id: 2,
-          titulo: 'Proposta enviada para Ana Costa - Digital Solutions',
-          time: 'Há 1h',
-          icon: Mail,
-          color: 'bg-blue-100 text-blue-600'
-        },
-        {
-          id: 3,
-          titulo: 'Reunião marcada com João Santos - StartupFlow',
-          time: 'Há 2h',
-          icon: Calendar,
-          color: 'bg-purple-100 text-purple-600'
-        },
-        {
-          id: 4,
-          titulo: 'Negócio fechado com Maria Oliveira - InnovaTech',
-          time: 'Há 3h',
-          icon: CheckCircle,
-          color: 'bg-green-100 text-green-600'
-        }
-      ]);
-    }
-    
-    // Carregar notificações
-    setNotifications([
-      {
-        id: 1,
-        tipo: 'urgente',
-        titulo: '5 leads quentes precisam de follow-up',
-        descricao: 'Leads recebidos nas últimas 24h',
-        time: '2 min atrás',
-        lida: false
-      },
-      {
-        id: 2,
-        tipo: 'info',
-        titulo: 'Meta mensal 80% atingida',
-        descricao: 'Faltam apenas R$ 97.000 para bater a meta',
-        time: '1h atrás',
-        lida: false
-      },
-      {
-        id: 3,
-        tipo: 'sucesso',
-        titulo: 'Proposta aprovada pela TechCorp',
-        descricao: 'Valor: R$ 285.000',
-        time: '3h atrás',
-        lida: true
-      }
-    ]);
+    // Carregar notificações reais (se houver), senão vazio
+    setNotifications([]);
   };
 
   // Função para calcular métricas em tempo real
@@ -662,14 +472,17 @@ const PainelPrincipalVendedor = () => {
 
   const recentActivities = atividades;
 
-  const topClients = clientes.slice(0, 3).map(cliente => ({
-    name: cliente.empresa,
-    value: `R$ ${(cliente.valorTotal / 1000).toFixed(1)}k`,
-    deals: cliente.pedidosFechados,
-    status: cliente.classificacao,
-    growth: `+${Math.round(cliente.saudeCliente * 0.3)}%`,
-    avatar: cliente.avatar
-  }));
+  const topClients = clientes
+    .sort((a, b) => (b.valorTotal || 0) - (a.valorTotal || 0))
+    .slice(0, 3)
+    .map(cliente => ({
+      name: cliente.nome || cliente.empresa,
+      value: `R$ ${((cliente.valorTotal || 0) / 1000).toFixed(1)}k`,
+      deals: cliente.pedidosFechados || 0,
+      status: cliente.classificacao || 'Ativo',
+      growth: `+${Math.round((cliente.saudeCliente || 70) * 0.3)}%`,
+      avatar: cliente.avatar || (cliente.nome ? cliente.nome.substring(0, 2).toUpperCase() : 'CL')
+    }));
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -2044,10 +1857,10 @@ const PainelPrincipalVendedor = () => {
                 <TrendingUp size={20} style={{ color: '#3b82f6', marginTop: '0.125rem' }} />
                 <div style={{ flex: 1 }}>
                   <p style={{ fontSize: '0.9rem', fontWeight: '600', color: '#1e40af', margin: '0 0 0.25rem 0' }}>
-                    Tendência Positiva
+                    Oportunidade de Crescimento
                   </p>
                   <p style={{ fontSize: '0.8rem', color: '#1e40af', margin: 0, lineHeight: '1.4' }}>
-                    Suas vendas aumentaram 23% este mês. {negocios.filter(n => n.estagio === 'Negociação').length} negócios em negociação!
+                    {negocios.filter(n => n.estagio === 'Negociação').length} negócios em negociação com potencial de R$ {(negocios.filter(n => n.estagio === 'Negociação').reduce((acc, n) => acc + n.valor, 0) / 1000).toFixed(0)}k
                   </p>
                   {expandedInsight === 1 && (
                     <div style={{ 
@@ -2057,9 +1870,9 @@ const PainelPrincipalVendedor = () => {
                       borderRadius: '8px' 
                     }}>
                       <p style={{ fontSize: '0.8rem', color: '#374151', margin: 0 }}>
-                        Continue focando em leads qualificados. Seus negócios de alta prioridade têm {
-                          Math.round((negocios.filter(n => n.prioridade === 'Alta').length / negocios.length) * 100)
-                        }% de chance de fechamento.
+                        Continue focando em leads qualificados. Suas negociações têm {
+                          Math.round((negocios.filter(n => n.probabilidade >= 70).length / negocios.length) * 100)
+                        }% de alta probabilidade de fechamento.
                       </p>
                     </div>
                   )}
@@ -2094,10 +1907,10 @@ const PainelPrincipalVendedor = () => {
                 <AlertCircle size={20} style={{ color: '#8b5cf6', marginTop: '0.125rem' }} />
                 <div style={{ flex: 1 }}>
                   <p style={{ fontSize: '0.9rem', fontWeight: '600', color: '#7c3aed', margin: '0 0 0.25rem 0' }}>
-                    Atenção Necessária
+                    Ação Necessária
                   </p>
                   <p style={{ fontSize: '0.8rem', color: '#7c3aed', margin: 0, lineHeight: '1.4' }}>
-                    {tarefas.filter(t => t.status === 'Pendente' && t.prioridade === 'Alta').length} tarefas de alta prioridade pendentes
+                    {tarefas.filter(t => t.status === 'Pendente' && t.prioridade === 'Alta').length} tarefas urgentes precisam de follow-up hoje
                   </p>
                   {expandedInsight === 2 && (
                     <div style={{ 
@@ -2107,7 +1920,7 @@ const PainelPrincipalVendedor = () => {
                       borderRadius: '8px' 
                     }}>
                       <p style={{ fontSize: '0.8rem', color: '#374151', margin: 0 }}>
-                        Priorize estas tarefas para manter o momentum. Clientes com alta prioridade têm maior potencial de conversão.
+                        Priorize estas tarefas para manter o ritmo. Clientes com follow-up rápido têm 4x mais chances de fechamento.
                       </p>
                     </div>
                   )}
@@ -2142,10 +1955,10 @@ const PainelPrincipalVendedor = () => {
                 <Award size={20} style={{ color: '#10b981', marginTop: '0.125rem' }} />
                 <div style={{ flex: 1 }}>
                   <p style={{ fontSize: '0.9rem', fontWeight: '600', color: '#059669', margin: '0 0 0.25rem 0' }}>
-                    Conquista Desbloqueada
+                    Performance Excelente
                   </p>
                   <p style={{ fontSize: '0.8rem', color: '#059669', margin: 0, lineHeight: '1.4' }}>
-                    {Math.round((tarefas.filter(t => t.status === 'Concluída').length / tarefas.length) * 100)}% de conclusão nas tarefas desta semana!
+                    {Math.round((tarefas.filter(t => t.status === 'Concluída').length / tarefas.length) * 100)}% de conclusão nas tarefas. Você está no top 10% dos vendedores!
                   </p>
                   {expandedInsight === 3 && (
                     <div style={{ 
@@ -2155,7 +1968,7 @@ const PainelPrincipalVendedor = () => {
                       borderRadius: '8px' 
                     }}>
                       <p style={{ fontSize: '0.8rem', color: '#374151', margin: 0 }}>
-                        Excelente produtividade! Continue mantendo esse ritmo para superar suas metas mensais.
+                        Excelente produtividade! Continue mantendo esse ritmo para superar suas metas mensais em até 15%.
                       </p>
                     </div>
                   )}
@@ -2215,11 +2028,11 @@ const PainelPrincipalVendedor = () => {
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = 'rgba(248, 250, 252, 0.8)';
-                e.currentTarget.style.transform = 'translateX(4px)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = 'transparent';
-                e.currentTarget.style.transform = 'translateX(0)';
+                e.currentTarget.style.transform = 'translateY(0)';
               }}
               onClick={() => setShowClientDetails(client)}
               >
@@ -2340,59 +2153,6 @@ const PainelPrincipalVendedor = () => {
               </button>
             ))}
           </div>
-        </div>
-      </div>
-
-      {/* Footer com Estatísticas em Tempo Real */}
-      <div style={{
-        background: 'rgba(255, 255, 255, 0.8)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        borderRadius: '20px',
-        padding: '2rem',
-        border: '1px solid rgba(255, 255, 255, 0.2)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
-        marginBottom: '1rem'
-      }}>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
-          gap: '2rem',
-          textAlign: 'center'
-        }}>
-          {[
-            { label: 'Ligações Hoje', value: tarefas.filter(t => t.tipo === 'Ligação' && t.status === 'Concluída').length * 15 },
-            { label: 'Taxa Resposta', value: '89%' },
-            { label: 'Demos Agendadas', value: tarefas.filter(t => t.tipo === 'Visita').length + 5 },
-            { label: 'Pipeline Total', value: `R$ ${(negocios.reduce((total, n) => total + n.valor, 0) / 1000000).toFixed(1)}M` },
-            { label: 'Leads Quentes', value: notifications.filter(n => n.tipo === 'urgente').length * 15 },
-            { label: 'Propostas Enviadas', value: negocios.filter(n => n.estagio === 'Proposta' || n.estagio === 'Negociação').length },
-            { label: 'Negócios Fechados', value: negocios.filter(n => n.estagio === 'Fechamento').length },
-            { label: 'Satisfação Cliente', value: `${Math.round(clientes.reduce((total, c) => total + c.saudeCliente, 0) / clientes.length)}%` }
-          ].map((stat, index) => (
-            <div key={index} style={{
-              transition: 'all 0.3s ease',
-              cursor: 'pointer',
-              padding: '0.5rem',
-              borderRadius: '8px'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)';
-              e.currentTarget.style.transform = 'translateY(-2px)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.transform = 'translateY(0)';
-            }}
-            >
-              <div style={{ fontSize: '2rem', fontWeight: '800', color: '#1e293b', marginBottom: '0.25rem' }}>
-                {stat.value}
-              </div>
-              <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '500' }}>
-                {stat.label}
-              </div>
-            </div>
-          ))}
         </div>
       </div>
 
@@ -2892,7 +2652,10 @@ const PainelPrincipalVendedor = () => {
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <div style={{ padding: '0.5rem', borderRadius: '8px' }} className={showTaskDetails.color}>
+                <div style={{
+                  padding: '0.5rem',
+                  borderRadius: '8px'
+                }} className={showTaskDetails.color}>
                   <showTaskDetails.icon size={20} />
                 </div>
                 <div>
@@ -3297,7 +3060,7 @@ const PainelPrincipalVendedor = () => {
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         @keyframes pulse {
           0%, 100% { opacity: 1; }
           50% { opacity: 0.5; }

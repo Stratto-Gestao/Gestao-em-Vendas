@@ -28,7 +28,6 @@ import AdminPage from './AdminPage';
 import AcademiaPage from './AcademiaPage';
 import PainelPrincipal from '../pages/SDR/PainelPrincipal';
 import GestaoLeads from '../pages/SDR/GestaoLeads';
-import Qualificacao from '../pages/SDR/Qualificacao';
 import AssistenteIA from '../pages/SDR/AssistenteIA';
 import PassagemVendas from '../pages/SDR/PassagemVendas';
 import AnalisePerformance from '../pages/SDR/AnalisePerformance';
@@ -76,7 +75,7 @@ const Dashboard = () => {
     // Submenu SDR
     painelprincipal: PanelTop,
     gestaoleads: FileStack,
-    qualificacao: BadgeCheck,
+    // qualificacao: BadgeCheck,
     assistenteia: Bot,
     passagemvendas: ArrowRightLeft,
     analiseperformance: AreaChart,
@@ -97,7 +96,6 @@ const Dashboard = () => {
     sdr: [
       'PainelPrincipal', 
       'GestaoLeads', 
-      'Qualificacao', 
       'AssistenteIA', 
       'PassagemVendas', 
       'AnalisePerformance', 
@@ -245,8 +243,8 @@ const Dashboard = () => {
         return validatePageAccess(<PainelPrincipal />, 'sdr');
       case 'GestaoLeads':
         return validatePageAccess(<GestaoLeads />, 'sdr');
-      case 'Qualificacao':
-        return validatePageAccess(<Qualificacao />, 'sdr');
+      // case 'Qualificacao':
+      //   return validatePageAccess(<Qualificacao />, 'sdr');
       case 'AssistenteIA':
         return validatePageAccess(<AssistenteIA />, 'sdr');
       case 'PassagemVendas':
@@ -386,7 +384,7 @@ const Dashboard = () => {
                         'PainelPrincipalVendedor': 'Painel',
                         'GestaoLeads': 'Leads',
                         'GestaoNegocios': 'Negócios',
-                        'Qualificacao': 'Qualific.',
+                      // 'Qualificacao': 'Qualific.',
                         'AssistenteIA': 'IA',
                         'AssistenteIAVendedor': 'IA',
                         'PassagemVendas': 'Passagem',

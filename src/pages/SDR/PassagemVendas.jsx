@@ -1,36 +1,47 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { db } from '../../config/firebase';
+import { collection, getDocs, query, where, addDoc, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { Send, Eye, CheckCircle, ArrowRight, Users, Target, Clock, Star, TrendingUp } from 'lucide-react';
 
 function PassagemVendas() {
-  const [leads, setLeads] = useState([
-    { 
-      id: 1, 
-      nome: 'Ana Costa', 
-      empresa: 'Inovação Digital Ltda.', 
-      pontuacao: 92, 
-      resumo: 'Lead muito engajado, BANT completo. Demonstrou interesse real na solução e tem orçamento aprovado.',
-      origem: 'LinkedIn',
-      ultimoContato: 'Há 2 dias'
-    },
-    { 
-      id: 2, 
-      nome: 'Bruno Mendes', 
-      empresa: 'Soluções Integradas S.A.', 
-      pontuacao: 88, 
-      resumo: 'Necessidade clara de otimização. Empresa em crescimento buscando automação de processos.',
-      origem: 'Website',
-      ultimoContato: 'Há 1 dia'
-    },
-    { 
-      id: 3, 
-      nome: 'Carlos Silva', 
-      empresa: 'TechStart Solutions', 
-      pontuacao: 95, 
-      resumo: 'Lead premium. CEO interessado em implementação imediata. Budget confirmado e timeline definido.',
-      origem: 'Indicação',
-      ultimoContato: 'Hoje'
-    }
-  ]);
+  // Limpa todos os dados de teste do Firestore e localStorage ao carregar a página
+  useEffect(() => {
+    const limparDados = async () => {
+      // Limpa localStorage
+      localStorage.removeItem('negocios');
+      // Limpa Firestore: leads e negocios
+      try {
+        const leadsSnap = await getDocs(collection(db, 'leads'));
+        for (const d of leadsSnap.docs) {
+          await deleteDoc(doc(db, 'leads', d.id));
+        }
+        const negociosSnap = await getDocs(collection(db, 'negocios'));
+        for (const d of negociosSnap.docs) {
+          await deleteDoc(doc(db, 'negocios', d.id));
+        }
+      } catch (e) {
+        // Ignora erros de permissão
+      }
+    };
+    limparDados();
+  }, []);
+  const [leads, setLeads] = useState([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    const fetchLeads = async () => {
+      setLoading(true);
+      try {
+        const q = query(collection(db, 'leads'), where('status', '==', 'Qualificado'));
+        const querySnapshot = await getDocs(q);
+        const leadsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setLeads(leadsData);
+      } catch (e) {
+        setLeads([]);
+      }
+      setLoading(false);
+    };
+    fetchLeads();
+  }, []);
 
   const [checklist, setChecklist] = useState([
     { id: 1, item: 'Informações de contato completas', checked: true },
@@ -48,13 +59,56 @@ function PassagemVendas() {
     setChecklist(checklist.map(item => item.id === id ? { ...item, checked: !item.checked } : item));
   };
 
-  const handlePassagemLead = (lead) => {
+  // Função para transferir lead qualificado para negócios do vendedor
+  const handlePassagemLead = async (lead) => {
     setSelectedLead(lead);
-    // Simular passagem
-    setTimeout(() => {
+    try {
+      // Cria negócio para o vendedor (coleção 'negocios' ou similar)
+      const novoNegocio = {
+        id: Date.now(),
+        titulo: `Negócio de ${lead.nome}`,
+        cliente: lead.nome,
+        empresa: lead.empresa,
+        contato: lead.nome,
+        valor: 0,
+        probabilidade: 50,
+        estagio: 'Qualificação',
+        responsavel: '', // pode ser preenchido com o vendedor logado
+        dataCriacao: new Date().toISOString(),
+        ultimaAtualizacao: new Date().toISOString(),
+        origem: lead.origem,
+        prioridade: 'Média',
+        email: lead.email || '',
+        telefone: lead.telefone || '',
+        segmento: '',
+        funcionarios: '',
+        website: '',
+        endereco: '',
+        observacoes: lead.resumo || '',
+        proximaAcao: '',
+        tag: 'Novo',
+        concorrentes: [],
+        motivos: [],
+        avatar: lead.nome ? lead.nome.substring(0, 2).toUpperCase() : 'NN',
+        atividades: 0,
+        propostas: 0
+      };
+      await addDoc(collection(db, 'negocios'), novoNegocio);
+      // Salva também no localStorage para aparecer no Kanban imediatamente
+      let negociosLS = [];
+      try {
+        negociosLS = JSON.parse(localStorage.getItem('negocios')) || [];
+      } catch (e) {}
+      negociosLS.push(novoNegocio);
+      localStorage.setItem('negocios', JSON.stringify(negociosLS));
+      // Atualiza status do lead para 'Transferido'
+      await updateDoc(doc(db, 'leads', lead.id), { status: 'Transferido' });
+      setLeads(leads.filter(l => l.id !== lead.id));
       alert(`Lead ${lead.nome} transferido com sucesso para a equipe de vendas!`);
-      setSelectedLead(null);
-    }, 1500);
+    } catch (e) {
+      alert('Erro ao transferir lead.');
+    }
+    setSelectedLead(null);
   };
 
   const getScoreColor = (score) => {
@@ -74,6 +128,7 @@ function PassagemVendas() {
     { label: 'Score Médio', value: '91.7', icon: Star, color: '#8b5cf6' }
   ];
 
+  const checklistOk = checklist.every(i => i.checked);
   return (
     <div className="passagem-vendas-page">
       {/* Header Principal */}
@@ -118,9 +173,11 @@ function PassagemVendas() {
             <div className="leads-count">{leads.length} prontos</div>
           </div>
 
-          <div className="leads-list">
-            {leads.length > 0 ? leads.map(lead => (
-              <div key={lead.id} className="lead-card">
+      <div className="leads-list">
+        {loading ? (
+          <div style={{ padding: '2rem', textAlign: 'center' }}>Carregando...</div>
+        ) : leads.length > 0 ? leads.map(lead => (
+          <div key={lead.id} className="lead-card">
                 <div className="lead-header">
                   <div className="lead-info">
                     <div className="lead-avatar">
@@ -153,7 +210,7 @@ function PassagemVendas() {
                   <button 
                     className="action-btn primary"
                     onClick={() => handlePassagemLead(lead)}
-                    disabled={selectedLead?.id === lead.id}
+                    disabled={selectedLead?.id === lead.id || !checklistOk}
                   >
                     {selectedLead?.id === lead.id ? (
                       <>Transferindo...</>
@@ -239,7 +296,7 @@ function PassagemVendas() {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .passagem-vendas-page {
           padding: 2rem;
           background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);

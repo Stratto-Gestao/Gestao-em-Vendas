@@ -9,29 +9,88 @@ import {
   AlertCircle, CheckCircle, PieChart
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import { collection, addDoc, doc, updateDoc, deleteDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import axios from 'axios';
+import { onSnapshot, collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
 
-const AdminPage = () => {
-  const { currentUser } = useAuth();
+// Função para resetar/excluir todos os dados do sistema
+function ResetAllDataButton({ currentUser, userRole }) {
+  const handleResetAllData = async () => {
+    if (!currentUser || userRole !== 'SUPER_ADMIN') {
+      alert(`Apenas SUPER_ADMIN pode executar esta ação. Seu role atual: ${userRole || 'undefined'}`);
+      return;
+    }
+    if (!window.confirm('Tem certeza que deseja EXCLUIR TODOS os dados de negócio? Esta ação é irreversível! Os USUÁRIOS serão mantidos.')) return;
+    try {
+      // Coleções de dados de negócio a serem limpas (NÃO remove usuários)
+      const colecoes = [
+        'leads', 'negocios', 'modules', 'articles', 'scripts', 'coldCalls', 'whatsappScripts', 'objecoes', 'emailTemplates', 'courses'
+      ];
+      for (const col of colecoes) {
+        const snap = await getDocs(collection(db, col));
+        for (const d of snap.docs) {
+          await deleteDoc(doc(db, col, d.id));
+        }
+      }
+      alert('Todos os dados de negócio foram excluídos com sucesso!');
+    } catch (error) {
+      alert('Erro ao excluir dados: ' + error.message);
+    }
+  };
 
+  return (
+    <button 
+      onClick={handleResetAllData}
+      className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+    >
+      Resetar Dados
+    </button>
+  );
+}
+
+function AdminPage() {
+  const { currentUser, userRole } = useAuth();
+
+  // States e funções do componente...
   const [modalState, setModalState] = useState({
-    addUser: false, addModule: false, manageModules: false,
-    addArticle: false, manageArticles: false, addScript: false, manageScripts: false,
-    addColdCall: false, manageColdCall: false,
-    addWhatsAppScript: false, manageWhatsAppScript: false,
-    addObjecoes: false, manageObjecoes: false,
-    addEmailTemplate: false, manageEmailTemplate: false,
-    addCourse: false, manageCourse: false,
-    addCampanha: false, manageCampaigns: false,
-    addMetaSemana: false, manageMetasSemana: false,
+    addUser: false,
+    addModule: false,
+    addArticle: false,
+    addScript: false,
+    addColdCall: false,
+    addWhatsAppScript: false,
+    addObjecoes: false,
+    addEmailTemplate: false,
+    addCourse: false,
+    addCampanha: false,
+    addMetaSemana: false,
+    manageUsers: false,
+    manageModules: false,
+    manageArticles: false,
+    manageScripts: false,
+    manageColdCall: false,
+    manageWhatsAppScript: false,
+    manageObjecoes: false,
+    manageEmailTemplate: false,
+    manageCourse: false,
+    manageCampanha: false,
+    manageMetaSemana: false
   });
 
-  const [stats, setStats] = useState({ 
-    usuarios: 0, modulos: 0, artigos: 0, scripts: 0,
-    coldCalls: 0, whatsAppScripts: 0, objecoes: 0, emailTemplates: 0, courses: 0, campanhas: 0, metasSemana: 0
+  const [isEditing, setIsEditing] = useState(false);
+  const [stats, setStats] = useState({
+    usuarios: 0,
+    modulos: 0,
+    artigos: 0,
+    scripts: 0,
+    coldCalls: 0,
+    whatsAppScripts: 0,
+    objecoes: 0,
+    emailTemplates: 0,
+    courses: 0,
+    campanhas: 0,
+    metasSemana: 0
   });
+
   const [allModules, setAllModules] = useState([]);
   const [allArticles, setAllArticles] = useState([]);
   const [allScripts, setAllScripts] = useState([]);
@@ -42,275 +101,401 @@ const AdminPage = () => {
   const [allCourses, setAllCourses] = useState([]);
   const [allCampanhas, setAllCampanhas] = useState([]);
   const [allMetasSemana, setAllMetasSemana] = useState([]);
-  
-  const [isEditing, setIsEditing] = useState(false);
-  
-  const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'USER_SDR', department: '' });
-  
-  const [currentModuleId, setCurrentModuleId] = useState(null);
+
   const [newModule, setNewModule] = useState({
-    title: '', description: '', difficulty: 'Intermediário', tags: '',
-    author: '', duration: '', videoLink: '', points: 10
+    title: '',
+    description: '',
+    difficulty: 'Básico',
+    duration: '',
+    author: '',
+    points: '',
+    category: 'Vendas',
+    dateAdded: new Date().toISOString().split('T')[0]
   });
 
+  const [newArticle, setNewArticle] = useState({
+    title: '',
+    description: '',
+    author: '',
+    category: 'Vendas',
+    dateAdded: new Date().toISOString().split('T')[0]
+  });
+
+  const [newScript, setNewScript] = useState({
+    title: '',
+    description: '',
+    department: 'Vendas',
+    script: '',
+    dateAdded: new Date().toISOString().split('T')[0]
+  });
+
+  const [newColdCall, setNewColdCall] = useState({
+    title: '',
+    description: '',
+    difficulty: 'Básico',
+    script: '',
+    dateAdded: new Date().toISOString().split('T')[0]
+  });
+
+  const [newWhatsAppScript, setNewWhatsAppScript] = useState({
+    title: '',
+    description: '',
+    difficulty: 'Básico',
+    funnelStage: 'Prospecção',
+    script: '',
+    dateAdded: new Date().toISOString().split('T')[0]
+  });
+
+  const [newObjecoes, setNewObjecoes] = useState({
+    title: '',
+    description: '',
+    difficulty: 'Básico',
+    type: 'Preço',
+    objection: '',
+    argument: '',
+    dateAdded: new Date().toISOString().split('T')[0]
+  });
+
+  const [newEmailTemplate, setNewEmailTemplate] = useState({
+    title: '',
+    description: '',
+    difficulty: 'Básico',
+    type: 'Prospecção',
+    template: '',
+    dateAdded: new Date().toISOString().split('T')[0]
+  });
+
+  const [newCourse, setNewCourse] = useState({
+    title: '',
+    description: '',
+    instructor: '',
+    duration: '',
+    difficulty: 'Básico',
+    modules: '',
+    dateAdded: new Date().toISOString().split('T')[0]
+  });
+
+  const [newCampanha, setNewCampanha] = useState({
+    titulo: '',
+    descricao: '',
+    tipo: 'Prospecção',
+    status: 'ativa',
+    dataInicio: '',
+    dataFim: '',
+    meta: '',
+    progresso: 0,
+    vendedoresParticipantes: 0
+  });
+
+  const [newMetaSemana, setNewMetaSemana] = useState({
+    titulo: '',
+    descricao: '',
+    semanaInicio: '',
+    semanaFim: '',
+    metaVendasRealizadas: 0,
+    metaValorVendas: 0,
+    vendasRealizadas: 0,
+    valorVendas: 0,
+    progresso: 0,
+    status: 'ativa'
+  });
+
+  const [currentModuleId, setCurrentModuleId] = useState(null);
   const [currentArticleId, setCurrentArticleId] = useState(null);
-  const [newArticle, setNewArticle] = useState({ title: '', content: '' });
-
   const [currentScriptId, setCurrentScriptId] = useState(null);
-  const [newScript, setNewScript] = useState({ title: '', description: '', department: '' });
-
-  // Estados para novos tipos de conteúdo
   const [currentColdCallId, setCurrentColdCallId] = useState(null);
-  const [newColdCall, setNewColdCall] = useState({ 
-    title: '', description: '', script: '', situation: '', difficulty: 'Intermediário'
-  });
-
   const [currentWhatsAppScriptId, setCurrentWhatsAppScriptId] = useState(null);
-  const [newWhatsAppScript, setNewWhatsAppScript] = useState({ 
-    title: '', description: '', funnelStage: 'Prospecção', script: '', difficulty: 'Básico'
-  });
-
   const [currentObjecoesId, setCurrentObjecoesId] = useState(null);
-  const [newObjecoes, setNewObjecoes] = useState({ 
-    title: '', objection: '', response: '', type: 'Cliente', difficulty: 'Intermediário'
-  });
-
   const [currentEmailTemplateId, setCurrentEmailTemplateId] = useState(null);
-  const [newEmailTemplate, setNewEmailTemplate] = useState({ 
-    title: '', subject: '', body: '', type: 'Follow-up', difficulty: 'Básico'
-  });
-
   const [currentCourseId, setCurrentCourseId] = useState(null);
-  const [newCourse, setNewCourse] = useState({ 
-    title: '', description: '', duration: '', modules: '', difficulty: 'Intermediário', instructor: ''
-  });
-
   const [currentCampanhaId, setCurrentCampanhaId] = useState(null);
-  const [newCampanha, setNewCampanha] = useState({ 
-    titulo: '', descricao: '', tipo: 'Promoção', status: 'ativa', 
-    dataInicio: '', dataFim: '', meta: 0, progresso: 0, vendedoresParticipantes: 0
-  });
-
   const [currentMetaSemanaId, setCurrentMetaSemanaId] = useState(null);
-  const [newMetaSemana, setNewMetaSemana] = useState({ 
-    titulo: '', descricao: '', semanaInicio: '', semanaFim: '', 
-    vendasRealizadas: 0, valorVendas: 0, clientesRecuperados: 0, novosClientes: 0,
-    metaVendasRealizadas: 0, metaValorVendas: 0, metaClientesRecuperados: 0, metaNovosClientes: 0,
-    status: 'ativa', progresso: 0
-  });
 
   useEffect(() => {
-    const subscriptions = [
-      onSnapshot(collection(db, 'users'), snapshot => setStats(prev => ({ ...prev, usuarios: snapshot.size }))),
-      onSnapshot(collection(db, 'modules'), snapshot => {
-        setAllModules(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        setStats(prev => ({ ...prev, modulos: snapshot.size }));
-      }),
-      onSnapshot(collection(db, 'articles'), snapshot => {
-        setAllArticles(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        setStats(prev => ({ ...prev, artigos: snapshot.size }));
-      }),
-      onSnapshot(collection(db, 'scripts'), snapshot => {
-        setAllScripts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        setStats(prev => ({ ...prev, scripts: snapshot.size }));
-      }),
-      // Novas coleções
-      onSnapshot(collection(db, 'coldCalls'), snapshot => {
-        setAllColdCalls(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        setStats(prev => ({ ...prev, coldCalls: snapshot.size }));
-      }),
-      onSnapshot(collection(db, 'whatsappScripts'), snapshot => {
-        setAllWhatsAppScripts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        setStats(prev => ({ ...prev, whatsAppScripts: snapshot.size }));
-      }),
-      onSnapshot(collection(db, 'objecoes'), snapshot => {
-        setAllObjecoes(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        setStats(prev => ({ ...prev, objecoes: snapshot.size }));
-      }),
-      onSnapshot(collection(db, 'emailTemplates'), snapshot => {
-        setAllEmailTemplates(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        setStats(prev => ({ ...prev, emailTemplates: snapshot.size }));
-      }),
-      onSnapshot(collection(db, 'courses'), snapshot => {
-        setAllCourses(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        setStats(prev => ({ ...prev, courses: snapshot.size }));
-      }),
-    ];
+    // Carregar dados do localStorage ou Firebase
+    const loadAllData = () => {
+      // Carregar módulos
+      const modulesData = JSON.parse(localStorage.getItem('modules-admin') || '[]');
+      setAllModules(modulesData);
 
-    // Carregar campanhas do localStorage
-    const loadCampanhas = () => {
-      const savedCampanhas = JSON.parse(localStorage.getItem('campanhas-admin') || '[]');
-      setAllCampanhas(savedCampanhas);
-      setStats(prev => ({ ...prev, campanhas: savedCampanhas.length }));
+      // Carregar artigos
+      const articlesData = JSON.parse(localStorage.getItem('articles-admin') || '[]');
+      setAllArticles(articlesData);
+
+      // Carregar scripts
+      const scriptsData = JSON.parse(localStorage.getItem('scripts-admin') || '[]');
+      setAllScripts(scriptsData);
+
+      // Carregar cold calls
+      const coldCallsData = JSON.parse(localStorage.getItem('coldCalls-admin') || '[]');
+      setAllColdCalls(coldCallsData);
+
+      // Carregar whatsapp scripts
+      const whatsAppScriptsData = JSON.parse(localStorage.getItem('whatsAppScripts-admin') || '[]');
+      setAllWhatsAppScripts(whatsAppScriptsData);
+
+      // Carregar objeções
+      const objecoesData = JSON.parse(localStorage.getItem('objecoes-admin') || '[]');
+      setAllObjecoes(objecoesData);
+
+      // Carregar templates de email
+      const emailTemplatesData = JSON.parse(localStorage.getItem('emailTemplates-admin') || '[]');
+      setAllEmailTemplates(emailTemplatesData);
+
+      // Carregar cursos
+      const coursesData = JSON.parse(localStorage.getItem('courses-admin') || '[]');
+      setAllCourses(coursesData);
+
+      // Carregar campanhas
+      const campanhasData = JSON.parse(localStorage.getItem('campanhas-admin') || '[]');
+      setAllCampanhas(campanhasData);
+
+      // Carregar metas da semana
+      const metasSemanaData = JSON.parse(localStorage.getItem('metas-semana-admin') || '[]');
+      setAllMetasSemana(metasSemanaData);
+
+      // Atualizar stats
+      setStats({
+        usuarios: 5, // Exemplo
+        modulos: modulesData.length,
+        artigos: articlesData.length,
+        scripts: scriptsData.length,
+        coldCalls: coldCallsData.length,
+        whatsAppScripts: whatsAppScriptsData.length,
+        objecoes: objecoesData.length,
+        emailTemplates: emailTemplatesData.length,
+        courses: coursesData.length,
+        campanhas: campanhasData.length,
+        metasSemana: metasSemanaData.length
+      });
     };
 
-    // Carregar metas da semana do localStorage
-    const loadMetasSemana = () => {
-      const savedMetasSemana = JSON.parse(localStorage.getItem('metas-semana-admin') || '[]');
-      setAllMetasSemana(savedMetasSemana);
-      setStats(prev => ({ ...prev, metasSemana: savedMetasSemana.length }));
-    };
-
-    loadCampanhas();
-    loadMetasSemana();
-    
-    return () => subscriptions.forEach(unsub => unsub());
+    loadAllData();
   }, []);
-  
-  const handleOpenModal = (modalName, editing = false, data = null) => {
+
+  const handleOpenModal = (modalType, editing = false, item = null) => {
+    setModalState(prev => ({ ...prev, [modalType]: true }));
     setIsEditing(editing);
     
-    if (data && Array.isArray(data.tags)) {
-        data.tags = data.tags.join(', ');
+    if (editing && item) {
+      switch (modalType) {
+        case 'addModule':
+          setNewModule(item);
+          setCurrentModuleId(item.id);
+          break;
+        case 'addArticle':
+          setNewArticle(item);
+          setCurrentArticleId(item.id);
+          break;
+        case 'addScript':
+          setNewScript(item);
+          setCurrentScriptId(item.id);
+          break;
+        case 'addColdCall':
+          setNewColdCall(item);
+          setCurrentColdCallId(item.id);
+          break;
+        case 'addWhatsAppScript':
+          setNewWhatsAppScript(item);
+          setCurrentWhatsAppScriptId(item.id);
+          break;
+        case 'addObjecoes':
+          setNewObjecoes(item);
+          setCurrentObjecoesId(item.id);
+          break;
+        case 'addEmailTemplate':
+          setNewEmailTemplate(item);
+          setCurrentEmailTemplateId(item.id);
+          break;
+        case 'addCourse':
+          setNewCourse(item);
+          setCurrentCourseId(item.id);
+          break;
+        case 'addCampanha':
+          setNewCampanha(item);
+          setCurrentCampanhaId(item.id);
+          break;
+        case 'addMetaSemana':
+          setNewMetaSemana(item);
+          setCurrentMetaSemanaId(item.id);
+          break;
+      }
     }
-
-    if (modalName === 'addModule') {
-      setCurrentModuleId(data ? data.id : null);
-      setNewModule(data ? data : { title: '', description: '', difficulty: 'Intermediário', tags: '', author: '', duration: '', videoLink: '', points: 10 });
-    } else if (modalName === 'addArticle') {
-      setCurrentArticleId(data ? data.id : null);
-      setNewArticle(data ? data : { title: '', content: '' });
-    } else if (modalName === 'addScript') {
-      setCurrentScriptId(data ? data.id : null);
-      setNewScript(data ? data : { title: '', description: '', department: '' });
-    } else if (modalName === 'addUser') {
-      setNewUser({ name: '', email: '', password: '', role: 'USER_SDR', department: '' });
-    } else if (modalName === 'addColdCall') {
-      setCurrentColdCallId(data ? data.id : null);
-      setNewColdCall(data ? data : { title: '', description: '', script: '', situation: '', difficulty: 'Intermediário' });
-    } else if (modalName === 'addWhatsAppScript') {
-      setCurrentWhatsAppScriptId(data ? data.id : null);
-      setNewWhatsAppScript(data ? data : { title: '', description: '', funnelStage: 'Prospecção', script: '', difficulty: 'Básico' });
-    } else if (modalName === 'addObjecoes') {
-      setCurrentObjecoesId(data ? data.id : null);
-      setNewObjecoes(data ? data : { title: '', objection: '', response: '', type: 'Cliente', difficulty: 'Intermediário' });
-    } else if (modalName === 'addEmailTemplate') {
-      setCurrentEmailTemplateId(data ? data.id : null);
-      setNewEmailTemplate(data ? data : { title: '', subject: '', body: '', type: 'Follow-up', difficulty: 'Básico' });
-    } else if (modalName === 'addCourse') {
-      setCurrentCourseId(data ? data.id : null);
-      setNewCourse(data ? data : { title: '', description: '', duration: '', modules: '', difficulty: 'Intermediário', instructor: '' });
-    } else if (modalName === 'addCampanha') {
-      setCurrentCampanhaId(data ? data.id : null);
-      setNewCampanha(data ? data : { titulo: '', descricao: '', tipo: 'Promoção', status: 'ativa', dataInicio: '', dataFim: '', meta: 0, progresso: 0, vendedoresParticipantes: 0 });
-    } else if (modalName === 'addMetaSemana') {
-      setCurrentMetaSemanaId(data ? data.id : null);
-      setNewMetaSemana(data ? data : { 
-        titulo: '', descricao: '', semanaInicio: '', semanaFim: '', 
-        vendasRealizadas: 0, valorVendas: 0, clientesRecuperados: 0, novosClientes: 0,
-        metaVendasRealizadas: 0, metaValorVendas: 0, metaClientesRecuperados: 0, metaNovosClientes: 0,
-        status: 'ativa', progresso: 0
-      });
-    }
-
-    setModalState(prev => ({ ...Object.keys(prev).reduce((acc, key) => ({...acc, [key]: false}), {}), [modalName]: true }));
   };
 
   const handleCloseModals = () => {
-    setModalState(prev => Object.keys(prev).reduce((acc, key) => ({...acc, [key]: false}), {}));
+    setModalState({
+      addUser: false,
+      addModule: false,
+      addArticle: false,
+      addScript: false,
+      addColdCall: false,
+      addWhatsAppScript: false,
+      addObjecoes: false,
+      addEmailTemplate: false,
+      addCourse: false,
+      addCampanha: false,
+      addMetaSemana: false,
+      manageUsers: false,
+      manageModules: false,
+      manageArticles: false,
+      manageScripts: false,
+      manageColdCall: false,
+      manageWhatsAppScript: false,
+      manageObjecoes: false,
+      manageEmailTemplate: false,
+      manageCourse: false,
+      manageCampanha: false,
+      manageMetaSemana: false
+    });
     setIsEditing(false);
     
-    // Resetar estados dos formulários
-    setNewCampanha({ 
-      titulo: '', descricao: '', tipo: 'Promoção', status: 'ativa', 
-      dataInicio: '', dataFim: '', meta: 0, progresso: 0, vendedoresParticipantes: 0
+    // Reset forms
+    setNewModule({
+      title: '',
+      description: '',
+      difficulty: 'Básico',
+      duration: '',
+      author: '',
+      points: '',
+      category: 'Vendas',
+      dateAdded: new Date().toISOString().split('T')[0]
     });
-    setCurrentCampanhaId(null);
-    
-    setNewMetaSemana({ 
-      titulo: '', descricao: '', semanaInicio: '', semanaFim: '', 
-      vendasRealizadas: 0, valorVendas: 0, clientesRecuperados: 0, novosClientes: 0,
-      metaVendasRealizadas: 0, metaValorVendas: 0, metaClientesRecuperados: 0, metaNovosClientes: 0,
-      status: 'ativa', progresso: 0
+    setNewArticle({
+      title: '',
+      description: '',
+      author: '',
+      category: 'Vendas',
+      dateAdded: new Date().toISOString().split('T')[0]
     });
-    setCurrentMetaSemanaId(null);
+    setNewScript({
+      title: '',
+      description: '',
+      department: 'Vendas',
+      script: '',
+      dateAdded: new Date().toISOString().split('T')[0]
+    });
+    setNewColdCall({
+      title: '',
+      description: '',
+      difficulty: 'Básico',
+      script: '',
+      dateAdded: new Date().toISOString().split('T')[0]
+    });
+    setNewWhatsAppScript({
+      title: '',
+      description: '',
+      difficulty: 'Básico',
+      funnelStage: 'Prospecção',
+      script: '',
+      dateAdded: new Date().toISOString().split('T')[0]
+    });
+    setNewObjecoes({
+      title: '',
+      description: '',
+      difficulty: 'Básico',
+      type: 'Preço',
+      objection: '',
+      argument: '',
+      dateAdded: new Date().toISOString().split('T')[0]
+    });
+    setNewEmailTemplate({
+      title: '',
+      description: '',
+      difficulty: 'Básico',
+      type: 'Prospecção',
+      template: '',
+      dateAdded: new Date().toISOString().split('T')[0]
+    });
+    setNewCourse({
+      title: '',
+      description: '',
+      instructor: '',
+      duration: '',
+      difficulty: 'Básico',
+      modules: '',
+      dateAdded: new Date().toISOString().split('T')[0]
+    });
+    setNewCampanha({
+      titulo: '',
+      descricao: '',
+      tipo: 'Prospecção',
+      status: 'ativa',
+      dataInicio: '',
+      dataFim: '',
+      meta: '',
+      progresso: 0,
+      vendedoresParticipantes: 0
+    });
+    setNewMetaSemana({
+      titulo: '',
+      descricao: '',
+      semanaInicio: '',
+      semanaFim: '',
+      metaVendasRealizadas: 0,
+      metaValorVendas: 0,
+      vendasRealizadas: 0,
+      valorVendas: 0,
+      progresso: 0,
+      status: 'ativa'
+    });
   };
 
-  const handleAddUser = async (e) => {
-    e.preventDefault();
-    if (!newUser.password || newUser.password.length < 6) {
-      alert("A senha deve ter no mínimo 6 caracteres.");
-      return;
-    }
-    try {
-      const token = await currentUser.getIdToken();
-      const apiUrl = 'https://us-central1-plataforma-de-vendas-a87c2.cloudfunctions.net/api/createUser';
-      await axios.post(apiUrl, newUser, { headers: { Authorization: `Bearer ${token}` } });
-      alert("Usuário criado com sucesso!");
-      handleCloseModals();
-    } catch (error) {
-      const errorMessage = error.response?.data || "Não foi possível criar o usuário. Verifique se você tem permissão de SUPER_ADMIN.";
-      alert(`Erro: ${errorMessage}`);
-    }
-  };
-
-  const generateThumbnailIcon = (title) => {
-    const icons = {
-      'cold': '🎯',
-      'call': '📞', 
-      'qualif': '✅',
-      'crm': '⚙️',
-      'obje': '🛡️',
-      'vend': '💼',
-      'prosp': '🔍',
-      'email': '✉️',
-      'spin': '🎓',
-      'metodol': '📊'
-    };
-    
-    const titleLower = title.toLowerCase();
-    for (const [key, icon] of Object.entries(icons)) {
-      if (titleLower.includes(key)) return icon;
-    }
-    return '🎥'; // ícone padrão
-  };
-
+  // Handlers para salvar dados
   const handleSaveModule = async (e) => {
     e.preventDefault();
-    
-    if (!newModule.videoLink || !newModule.videoLink.startsWith('http')) {
-      alert("Por favor, insira um link válido para o vídeo (deve começar com http:// ou https://).");
-      return;
-    }
-
     const moduleData = {
       ...newModule,
-      tags: newModule.tags.split(',').map(tag => tag.trim()).filter(tag => tag !== ''),
-      type: 'video', 
-      category: 'Vendas', 
-      rating: 4.8, 
-      views: isEditing ? newModule.views || 0 : 0,
-      thumbnail: generateThumbnailIcon(newModule.title),
-      dateAdded: newModule.dateAdded || new Date().toISOString().split('T')[0],
-      isFavorite: false
+      type: 'module',
+      category: 'Treinamento',
+      readTime: newModule.duration,
+      rating: 4.8,
+      icon: '🎥',
+      tags: ['módulo', 'treinamento', 'vendas'],
+      dateAdded: newModule.dateAdded || new Date().toISOString().split('T')[0]
     };
 
     try {
       if (isEditing) {
-        await updateDoc(doc(db, 'modules', currentModuleId), moduleData);
+        const existingModules = JSON.parse(localStorage.getItem('modules-admin') || '[]');
+        const updatedModules = existingModules.map(module => 
+          module.id === currentModuleId ? { ...moduleData, id: currentModuleId } : module
+        );
+        localStorage.setItem('modules-admin', JSON.stringify(updatedModules));
+        setAllModules(updatedModules);
         alert("Módulo atualizado com sucesso!");
       } else {
-        await addDoc(collection(db, 'modules'), { 
-          ...moduleData, 
-          createdAt: new Date(), 
-          createdBy: currentUser.uid 
-        });
-        alert("Módulo adicionado com sucesso! Agora está disponível na Academia.");
+        const moduleWithId = {
+          ...moduleData,
+          id: Date.now().toString()
+        };
+        
+        const existingModules = JSON.parse(localStorage.getItem('modules-admin') || '[]');
+        const updatedModules = [...existingModules, moduleWithId];
+        localStorage.setItem('modules-admin', JSON.stringify(updatedModules));
+        setAllModules(updatedModules);
+        alert("Módulo adicionado com sucesso!");
       }
+      
+      setStats(prev => ({ ...prev, modulos: JSON.parse(localStorage.getItem('modules-admin') || '[]').length }));
       handleCloseModals();
     } catch (error) {
-      alert("Erro ao salvar módulo. Verifique suas permissões de Admin e o console para mais detalhes.");
+      alert("Erro ao salvar módulo.");
       console.error(error);
     }
   };
 
-  const handleDeleteModule = async (id) => { 
-    if (window.confirm("Tem certeza que deseja apagar este módulo? Esta ação não pode ser desfeita.")) {
+  const handleDeleteModule = async (id) => {
+    if (window.confirm("Tem certeza que deseja apagar este módulo?")) {
       try {
-        await deleteDoc(doc(db, 'modules', id));
+        const existingModules = JSON.parse(localStorage.getItem('modules-admin') || '[]');
+        const updatedModules = existingModules.filter(module => module.id !== id);
+        localStorage.setItem('modules-admin', JSON.stringify(updatedModules));
+        setAllModules(updatedModules);
+        setStats(prev => ({ ...prev, modulos: updatedModules.length }));
         alert("Módulo removido com sucesso!");
       } catch (error) {
-        alert("Erro ao remover módulo.");
+        alert("Erro ao deletar módulo.");
         console.error(error);
       }
     }
@@ -318,25 +503,40 @@ const AdminPage = () => {
 
   const handleSaveArticle = async (e) => {
     e.preventDefault();
-    
     const articleData = {
       ...newArticle,
       type: 'article',
+      category: 'Conhecimento',
+      readTime: '5 min',
+      rating: 4.7,
+      icon: '📄',
+      tags: ['artigo', 'conhecimento', 'vendas'],
       dateAdded: newArticle.dateAdded || new Date().toISOString().split('T')[0]
     };
 
     try {
       if (isEditing) {
-        await updateDoc(doc(db, 'articles', currentArticleId), articleData);
+        const existingArticles = JSON.parse(localStorage.getItem('articles-admin') || '[]');
+        const updatedArticles = existingArticles.map(article => 
+          article.id === currentArticleId ? { ...articleData, id: currentArticleId } : article
+        );
+        localStorage.setItem('articles-admin', JSON.stringify(updatedArticles));
+        setAllArticles(updatedArticles);
         alert("Artigo atualizado com sucesso!");
       } else {
-        await addDoc(collection(db, 'articles'), {
+        const articleWithId = {
           ...articleData,
-          createdAt: new Date(),
-          createdBy: currentUser.uid,
-        });
+          id: Date.now().toString()
+        };
+        
+        const existingArticles = JSON.parse(localStorage.getItem('articles-admin') || '[]');
+        const updatedArticles = [...existingArticles, articleWithId];
+        localStorage.setItem('articles-admin', JSON.stringify(updatedArticles));
+        setAllArticles(updatedArticles);
         alert("Artigo adicionado com sucesso!");
       }
+      
+      setStats(prev => ({ ...prev, artigos: JSON.parse(localStorage.getItem('articles-admin') || '[]').length }));
       handleCloseModals();
     } catch (error) {
       alert("Erro ao salvar artigo.");
@@ -347,10 +547,14 @@ const AdminPage = () => {
   const handleDeleteArticle = async (id) => {
     if (window.confirm("Tem certeza que deseja apagar este artigo?")) {
       try {
-        await deleteDoc(doc(db, 'articles', id));
+        const existingArticles = JSON.parse(localStorage.getItem('articles-admin') || '[]');
+        const updatedArticles = existingArticles.filter(article => article.id !== id);
+        localStorage.setItem('articles-admin', JSON.stringify(updatedArticles));
+        setAllArticles(updatedArticles);
+        setStats(prev => ({ ...prev, artigos: updatedArticles.length }));
         alert("Artigo removido com sucesso!");
       } catch (error) {
-        alert("Erro ao remover artigo.");
+        alert("Erro ao deletar artigo.");
         console.error(error);
       }
     }
@@ -358,25 +562,40 @@ const AdminPage = () => {
 
   const handleSaveScript = async (e) => {
     e.preventDefault();
-    
     const scriptData = {
       ...newScript,
       type: 'script',
+      category: 'Comunicação',
+      readTime: '3 min',
+      rating: 4.6,
+      icon: '💬',
+      tags: ['script', 'comunicação', 'vendas'],
       dateAdded: newScript.dateAdded || new Date().toISOString().split('T')[0]
     };
 
     try {
       if (isEditing) {
-        await updateDoc(doc(db, 'scripts', currentScriptId), scriptData);
+        const existingScripts = JSON.parse(localStorage.getItem('scripts-admin') || '[]');
+        const updatedScripts = existingScripts.map(script => 
+          script.id === currentScriptId ? { ...scriptData, id: currentScriptId } : script
+        );
+        localStorage.setItem('scripts-admin', JSON.stringify(updatedScripts));
+        setAllScripts(updatedScripts);
         alert("Script atualizado com sucesso!");
       } else {
-        await addDoc(collection(db, 'scripts'), {
+        const scriptWithId = {
           ...scriptData,
-          createdAt: new Date(),
-          createdBy: currentUser.uid,
-        });
+          id: Date.now().toString()
+        };
+        
+        const existingScripts = JSON.parse(localStorage.getItem('scripts-admin') || '[]');
+        const updatedScripts = [...existingScripts, scriptWithId];
+        localStorage.setItem('scripts-admin', JSON.stringify(updatedScripts));
+        setAllScripts(updatedScripts);
         alert("Script adicionado com sucesso!");
       }
+      
+      setStats(prev => ({ ...prev, scripts: JSON.parse(localStorage.getItem('scripts-admin') || '[]').length }));
       handleCloseModals();
     } catch (error) {
       alert("Erro ao salvar script.");
@@ -387,10 +606,14 @@ const AdminPage = () => {
   const handleDeleteScript = async (id) => {
     if (window.confirm("Tem certeza que deseja apagar este script?")) {
       try {
-        await deleteDoc(doc(db, 'scripts', id));
+        const existingScripts = JSON.parse(localStorage.getItem('scripts-admin') || '[]');
+        const updatedScripts = existingScripts.filter(script => script.id !== id);
+        localStorage.setItem('scripts-admin', JSON.stringify(updatedScripts));
+        setAllScripts(updatedScripts);
+        setStats(prev => ({ ...prev, scripts: updatedScripts.length }));
         alert("Script removido com sucesso!");
       } catch (error) {
-        alert("Erro ao remover script.");
+        alert("Erro ao deletar script.");
         console.error(error);
       }
     }
@@ -400,97 +623,127 @@ const AdminPage = () => {
     e.preventDefault();
     const coldCallData = {
       ...newColdCall,
-      type: 'coldcall',
-      category: 'Vendas',
-      readTime: '5 min',
-      rating: 4.7,
+      type: 'coldCall',
+      category: 'Cold Call',
+      readTime: '6 min',
+      rating: 4.4,
       icon: '📞',
-      tags: ['cold-call', 'técnicas', 'vendas'],
+      tags: ['cold call', 'prospecção', 'vendas'],
       dateAdded: newColdCall.dateAdded || new Date().toISOString().split('T')[0]
     };
 
     try {
       if (isEditing) {
-        await updateDoc(doc(db, 'coldCalls', currentColdCallId), coldCallData);
-        alert("Técnica de Cold Call atualizada com sucesso!");
+        const existingColdCalls = JSON.parse(localStorage.getItem('coldCalls-admin') || '[]');
+        const updatedColdCalls = existingColdCalls.map(coldCall => 
+          coldCall.id === currentColdCallId ? { ...coldCallData, id: currentColdCallId } : coldCall
+        );
+        localStorage.setItem('coldCalls-admin', JSON.stringify(updatedColdCalls));
+        setAllColdCalls(updatedColdCalls);
+        alert("Cold Call atualizado com sucesso!");
       } else {
-        await addDoc(collection(db, 'coldCalls'), {
+        const coldCallWithId = {
           ...coldCallData,
-          createdAt: new Date(),
-          createdBy: currentUser.uid,
-        });
-        alert("Técnica de Cold Call adicionada com sucesso!");
+          id: Date.now().toString()
+        };
+        
+        const existingColdCalls = JSON.parse(localStorage.getItem('coldCalls-admin') || '[]');
+        const updatedColdCalls = [...existingColdCalls, coldCallWithId];
+        localStorage.setItem('coldCalls-admin', JSON.stringify(updatedColdCalls));
+        setAllColdCalls(updatedColdCalls);
+        alert("Cold Call adicionado com sucesso!");
       }
+      
+      setStats(prev => ({ ...prev, coldCalls: JSON.parse(localStorage.getItem('coldCalls-admin') || '[]').length }));
       handleCloseModals();
     } catch (error) {
-      alert("Erro ao salvar técnica de Cold Call.");
+      alert("Erro ao salvar cold call.");
       console.error(error);
     }
   };
-  
+
   const handleDeleteColdCall = async (id) => {
-      if (window.confirm("Tem certeza que deseja apagar esta técnica de Cold Call?")) {
-          try {
-              await deleteDoc(doc(db, 'coldCalls', id));
-              alert("Técnica de Cold Call removida com sucesso!");
-          } catch (error) {
-              alert("Erro ao deletar técnica de Cold Call.");
-              console.error(error);
-          }
+    if (window.confirm("Tem certeza que deseja apagar esta técnica de cold call?")) {
+      try {
+        const existingColdCalls = JSON.parse(localStorage.getItem('coldCalls-admin') || '[]');
+        const updatedColdCalls = existingColdCalls.filter(coldCall => coldCall.id !== id);
+        localStorage.setItem('coldCalls-admin', JSON.stringify(updatedColdCalls));
+        setAllColdCalls(updatedColdCalls);
+        setStats(prev => ({ ...prev, coldCalls: updatedColdCalls.length }));
+        alert("Cold Call removido com sucesso!");
+      } catch (error) {
+        alert("Erro ao deletar cold call.");
+        console.error(error);
       }
+    }
   };
 
   const handleSaveWhatsAppScript = async (e) => {
     e.preventDefault();
-    const whatsappData = {
+    const whatsAppScriptData = {
       ...newWhatsAppScript,
-      type: 'whatsapp',
-      category: 'Comunicação',
-      readTime: '3 min',
-      rating: 4.6,
+      type: 'whatsAppScript',
+      category: 'WhatsApp',
+      readTime: '4 min',
+      rating: 4.3,
       icon: '💬',
-      tags: ['whatsapp', 'funil', 'scripts'],
+      tags: ['whatsapp', 'script', 'vendas'],
       dateAdded: newWhatsAppScript.dateAdded || new Date().toISOString().split('T')[0]
     };
 
     try {
       if (isEditing) {
-        await updateDoc(doc(db, 'whatsappScripts', currentWhatsAppScriptId), whatsappData);
-        alert("Script de WhatsApp atualizado com sucesso!");
+        const existingWhatsAppScripts = JSON.parse(localStorage.getItem('whatsAppScripts-admin') || '[]');
+        const updatedWhatsAppScripts = existingWhatsAppScripts.map(script => 
+          script.id === currentWhatsAppScriptId ? { ...whatsAppScriptData, id: currentWhatsAppScriptId } : script
+        );
+        localStorage.setItem('whatsAppScripts-admin', JSON.stringify(updatedWhatsAppScripts));
+        setAllWhatsAppScripts(updatedWhatsAppScripts);
+        alert("Script WhatsApp atualizado com sucesso!");
       } else {
-        await addDoc(collection(db, 'whatsappScripts'), {
-          ...whatsappData,
-          createdAt: new Date(),
-          createdBy: currentUser.uid,
-        });
-        alert("Script de WhatsApp adicionado com sucesso!");
+        const whatsAppScriptWithId = {
+          ...whatsAppScriptData,
+          id: Date.now().toString()
+        };
+        
+        const existingWhatsAppScripts = JSON.parse(localStorage.getItem('whatsAppScripts-admin') || '[]');
+        const updatedWhatsAppScripts = [...existingWhatsAppScripts, whatsAppScriptWithId];
+        localStorage.setItem('whatsAppScripts-admin', JSON.stringify(updatedWhatsAppScripts));
+        setAllWhatsAppScripts(updatedWhatsAppScripts);
+        alert("Script WhatsApp adicionado com sucesso!");
       }
+      
+      setStats(prev => ({ ...prev, whatsAppScripts: JSON.parse(localStorage.getItem('whatsAppScripts-admin') || '[]').length }));
       handleCloseModals();
     } catch (error) {
-      alert("Erro ao salvar script de WhatsApp.");
+      alert("Erro ao salvar script WhatsApp.");
       console.error(error);
     }
   };
 
   const handleDeleteWhatsAppScript = async (id) => {
-      if (window.confirm("Tem certeza que deseja apagar este script de WhatsApp?")) {
-          try {
-              await deleteDoc(doc(db, 'whatsappScripts', id));
-              alert("Script de WhatsApp removido com sucesso!");
-          } catch (error) {
-              alert("Erro ao deletar script de WhatsApp.");
-              console.error(error);
-          }
+    if (window.confirm("Tem certeza que deseja apagar este script WhatsApp?")) {
+      try {
+        const existingWhatsAppScripts = JSON.parse(localStorage.getItem('whatsAppScripts-admin') || '[]');
+        const updatedWhatsAppScripts = existingWhatsAppScripts.filter(script => script.id !== id);
+        localStorage.setItem('whatsAppScripts-admin', JSON.stringify(updatedWhatsAppScripts));
+        setAllWhatsAppScripts(updatedWhatsAppScripts);
+        setStats(prev => ({ ...prev, whatsAppScripts: updatedWhatsAppScripts.length }));
+        alert("Script WhatsApp removido com sucesso!");
+      } catch (error) {
+        alert("Erro ao deletar script WhatsApp.");
+        console.error(error);
       }
+    }
   };
-  
+
   const handleSaveObjecoes = async (e) => {
     e.preventDefault();
     const objecoesData = {
       ...newObjecoes,
-      type: 'objection',
-      category: 'Vendas',
-      readTime: '7 min',
+      type: 'objecoes',
+      category: 'Objeções',
+      readTime: '5 min',
       rating: 4.8,
       icon: '🛡️',
       tags: ['objeções', 'argumentação', 'vendas'],
@@ -499,16 +752,27 @@ const AdminPage = () => {
 
     try {
       if (isEditing) {
-        await updateDoc(doc(db, 'objecoes', currentObjecoesId), objecoesData);
+        const existingObjecoes = JSON.parse(localStorage.getItem('objecoes-admin') || '[]');
+        const updatedObjecoes = existingObjecoes.map(objecao => 
+          objecao.id === currentObjecoesId ? { ...objecoesData, id: currentObjecoesId } : objecao
+        );
+        localStorage.setItem('objecoes-admin', JSON.stringify(updatedObjecoes));
+        setAllObjecoes(updatedObjecoes);
         alert("Objeção atualizada com sucesso!");
       } else {
-        await addDoc(collection(db, 'objecoes'), {
+        const objecaoWithId = {
           ...objecoesData,
-          createdAt: new Date(),
-          createdBy: currentUser.uid,
-        });
+          id: Date.now().toString()
+        };
+        
+        const existingObjecoes = JSON.parse(localStorage.getItem('objecoes-admin') || '[]');
+        const updatedObjecoes = [...existingObjecoes, objecaoWithId];
+        localStorage.setItem('objecoes-admin', JSON.stringify(updatedObjecoes));
+        setAllObjecoes(updatedObjecoes);
         alert("Objeção adicionada com sucesso!");
       }
+      
+      setStats(prev => ({ ...prev, objecoes: JSON.parse(localStorage.getItem('objecoes-admin') || '[]').length }));
       handleCloseModals();
     } catch (error) {
       alert("Erro ao salvar objeção.");
@@ -517,15 +781,19 @@ const AdminPage = () => {
   };
 
   const handleDeleteObjecoes = async (id) => {
-      if (window.confirm("Tem certeza que deseja apagar esta objeção?")) {
-          try {
-              await deleteDoc(doc(db, 'objecoes', id));
-              alert("Objeção removida com sucesso!");
-          } catch (error) {
-              alert("Erro ao deletar objeção.");
-              console.error(error);
-          }
+    if (window.confirm("Tem certeza que deseja apagar esta objeção?")) {
+      try {
+        const existingObjecoes = JSON.parse(localStorage.getItem('objecoes-admin') || '[]');
+        const updatedObjecoes = existingObjecoes.filter(objecao => objecao.id !== id);
+        localStorage.setItem('objecoes-admin', JSON.stringify(updatedObjecoes));
+        setAllObjecoes(updatedObjecoes);
+        setStats(prev => ({ ...prev, objecoes: updatedObjecoes.length }));
+        alert("Objeção removida com sucesso!");
+      } catch (error) {
+        alert("Erro ao deletar objeção.");
+        console.error(error);
       }
+    }
   };
 
   const handleSaveEmailTemplate = async (e) => {
@@ -543,16 +811,27 @@ const AdminPage = () => {
 
     try {
       if (isEditing) {
-        await updateDoc(doc(db, 'emailTemplates', currentEmailTemplateId), emailData);
-        alert("Template de Email atualizado com sucesso!");
+        const existingEmailTemplates = JSON.parse(localStorage.getItem('emailTemplates-admin') || '[]');
+        const updatedEmailTemplates = existingEmailTemplates.map(template => 
+          template.id === currentEmailTemplateId ? { ...emailData, id: currentEmailTemplateId } : template
+        );
+        localStorage.setItem('emailTemplates-admin', JSON.stringify(updatedEmailTemplates));
+        setAllEmailTemplates(updatedEmailTemplates);
+        alert("Template de email atualizado com sucesso!");
       } else {
-        await addDoc(collection(db, 'emailTemplates'), {
+        const emailWithId = {
           ...emailData,
-          createdAt: new Date(),
-          createdBy: currentUser.uid,
-        });
-        alert("Template de Email adicionado com sucesso!");
+          id: Date.now().toString()
+        };
+        
+        const existingEmailTemplates = JSON.parse(localStorage.getItem('emailTemplates-admin') || '[]');
+        const updatedEmailTemplates = [...existingEmailTemplates, emailWithId];
+        localStorage.setItem('emailTemplates-admin', JSON.stringify(updatedEmailTemplates));
+        setAllEmailTemplates(updatedEmailTemplates);
+        alert("Template de email adicionado com sucesso!");
       }
+      
+      setStats(prev => ({ ...prev, emailTemplates: JSON.parse(localStorage.getItem('emailTemplates-admin') || '[]').length }));
       handleCloseModals();
     } catch (error) {
       alert("Erro ao salvar template de email.");
@@ -561,15 +840,19 @@ const AdminPage = () => {
   };
 
   const handleDeleteEmailTemplate = async (id) => {
-      if (window.confirm("Tem certeza que deseja apagar este template de email?")) {
-          try {
-              await deleteDoc(doc(db, 'emailTemplates', id));
-              alert("Template de email removido com sucesso!");
-          } catch (error) {
-              alert("Erro ao deletar template de email.");
-              console.error(error);
-          }
+    if (window.confirm("Tem certeza que deseja apagar este template de email?")) {
+      try {
+        const existingEmailTemplates = JSON.parse(localStorage.getItem('emailTemplates-admin') || '[]');
+        const updatedEmailTemplates = existingEmailTemplates.filter(template => template.id !== id);
+        localStorage.setItem('emailTemplates-admin', JSON.stringify(updatedEmailTemplates));
+        setAllEmailTemplates(updatedEmailTemplates);
+        setStats(prev => ({ ...prev, emailTemplates: updatedEmailTemplates.length }));
+        alert("Template de email removido com sucesso!");
+      } catch (error) {
+        alert("Erro ao deletar template de email.");
+        console.error(error);
       }
+    }
   };
 
   const handleSaveCourse = async (e) => {
@@ -587,16 +870,27 @@ const AdminPage = () => {
 
     try {
       if (isEditing) {
-        await updateDoc(doc(db, 'courses', currentCourseId), courseData);
+        const existingCourses = JSON.parse(localStorage.getItem('courses-admin') || '[]');
+        const updatedCourses = existingCourses.map(course => 
+          course.id === currentCourseId ? { ...courseData, id: currentCourseId } : course
+        );
+        localStorage.setItem('courses-admin', JSON.stringify(updatedCourses));
+        setAllCourses(updatedCourses);
         alert("Curso atualizado com sucesso!");
       } else {
-        await addDoc(collection(db, 'courses'), {
+        const courseWithId = {
           ...courseData,
-          createdAt: new Date(),
-          createdBy: currentUser.uid,
-        });
+          id: Date.now().toString()
+        };
+        
+        const existingCourses = JSON.parse(localStorage.getItem('courses-admin') || '[]');
+        const updatedCourses = [...existingCourses, courseWithId];
+        localStorage.setItem('courses-admin', JSON.stringify(updatedCourses));
+        setAllCourses(updatedCourses);
         alert("Curso adicionado com sucesso!");
       }
+      
+      setStats(prev => ({ ...prev, courses: JSON.parse(localStorage.getItem('courses-admin') || '[]').length }));
       handleCloseModals();
     } catch (error) {
       alert("Erro ao salvar curso.");
@@ -608,33 +902,28 @@ const AdminPage = () => {
     e.preventDefault();
     const campanhaData = {
       ...newCampanha,
-      id: isEditing ? currentCampanhaId : Date.now(),
-      createdAt: new Date().toISOString(),
-      createdBy: currentUser?.uid || 'admin',
-      updatedAt: new Date().toISOString()
+      id: isEditing ? currentCampanhaId : Date.now().toString(),
+      dateAdded: new Date().toISOString().split('T')[0]
     };
 
     try {
-      // Salvar no localStorage
-      const existingCampanhas = JSON.parse(localStorage.getItem('campanhas-admin') || '[]');
-      
       if (isEditing) {
-        const index = existingCampanhas.findIndex(c => c.id === currentCampanhaId);
-        if (index !== -1) {
-          existingCampanhas[index] = campanhaData;
-        }
+        const existingCampanhas = JSON.parse(localStorage.getItem('campanhas-admin') || '[]');
+        const updatedCampanhas = existingCampanhas.map(campanha => 
+          campanha.id === currentCampanhaId ? campanhaData : campanha
+        );
+        localStorage.setItem('campanhas-admin', JSON.stringify(updatedCampanhas));
+        setAllCampanhas(updatedCampanhas);
         alert("Campanha atualizada com sucesso!");
       } else {
-        existingCampanhas.push(campanhaData);
+        const existingCampanhas = JSON.parse(localStorage.getItem('campanhas-admin') || '[]');
+        const updatedCampanhas = [...existingCampanhas, campanhaData];
+        localStorage.setItem('campanhas-admin', JSON.stringify(updatedCampanhas));
+        setAllCampanhas(updatedCampanhas);
         alert("Campanha adicionada com sucesso!");
       }
       
-      localStorage.setItem('campanhas-admin', JSON.stringify(existingCampanhas));
-      
-      // Atualizar estado local
-      setAllCampanhas(existingCampanhas);
-      setStats(prev => ({ ...prev, campanhas: existingCampanhas.length }));
-      
+      setStats(prev => ({ ...prev, campanhas: JSON.parse(localStorage.getItem('campanhas-admin') || '[]').length }));
       handleCloseModals();
     } catch (error) {
       alert("Erro ao salvar campanha.");
@@ -645,18 +934,14 @@ const AdminPage = () => {
   const handleDeleteCampanha = async (id) => {
     if (window.confirm("Tem certeza que deseja apagar esta campanha?")) {
       try {
-        // Remove do localStorage
         const existingCampanhas = JSON.parse(localStorage.getItem('campanhas-admin') || '[]');
-        const updatedCampanhas = existingCampanhas.filter(c => c.id !== id);
+        const updatedCampanhas = existingCampanhas.filter(campanha => campanha.id !== id);
         localStorage.setItem('campanhas-admin', JSON.stringify(updatedCampanhas));
-        
-        // Atualizar estado local
         setAllCampanhas(updatedCampanhas);
         setStats(prev => ({ ...prev, campanhas: updatedCampanhas.length }));
-        
         alert("Campanha removida com sucesso!");
       } catch (error) {
-        alert("Erro ao remover campanha.");
+        alert("Erro ao deletar campanha.");
         console.error(error);
       }
     }
@@ -664,49 +949,30 @@ const AdminPage = () => {
 
   const handleSaveMetaSemana = async (e) => {
     e.preventDefault();
-    
-    // Calcular progresso baseado nas metas
-    const progressoVendas = newMetaSemana.metaVendasRealizadas > 0 ? 
-      (newMetaSemana.vendasRealizadas / newMetaSemana.metaVendasRealizadas) * 100 : 0;
-    const progressoValor = newMetaSemana.metaValorVendas > 0 ? 
-      (newMetaSemana.valorVendas / newMetaSemana.metaValorVendas) * 100 : 0;
-    const progressoRecuperados = newMetaSemana.metaClientesRecuperados > 0 ? 
-      (newMetaSemana.clientesRecuperados / newMetaSemana.metaClientesRecuperados) * 100 : 0;
-    const progressoNovos = newMetaSemana.metaNovosClientes > 0 ? 
-      (newMetaSemana.novosClientes / newMetaSemana.metaNovosClientes) * 100 : 0;
-    
-    const progressoMedio = (progressoVendas + progressoValor + progressoRecuperados + progressoNovos) / 4;
-    
-    const metaData = {
+    const metaSemanaData = {
       ...newMetaSemana,
-      id: isEditing ? currentMetaSemanaId : Date.now(),
-      progresso: Math.round(progressoMedio),
-      createdAt: new Date().toISOString(),
-      createdBy: currentUser?.uid || 'admin',
-      updatedAt: new Date().toISOString()
+      id: isEditing ? currentMetaSemanaId : Date.now().toString(),
+      dateAdded: new Date().toISOString().split('T')[0]
     };
 
     try {
-      // Salvar no localStorage
-      const existingMetas = JSON.parse(localStorage.getItem('metas-semana-admin') || '[]');
-      
       if (isEditing) {
-        const index = existingMetas.findIndex(m => m.id === currentMetaSemanaId);
-        if (index !== -1) {
-          existingMetas[index] = metaData;
-        }
+        const existingMetas = JSON.parse(localStorage.getItem('metas-semana-admin') || '[]');
+        const updatedMetas = existingMetas.map(meta => 
+          meta.id === currentMetaSemanaId ? metaSemanaData : meta
+        );
+        localStorage.setItem('metas-semana-admin', JSON.stringify(updatedMetas));
+        setAllMetasSemana(updatedMetas);
         alert("Meta da semana atualizada com sucesso!");
       } else {
-        existingMetas.push(metaData);
+        const existingMetas = JSON.parse(localStorage.getItem('metas-semana-admin') || '[]');
+        const updatedMetas = [...existingMetas, metaSemanaData];
+        localStorage.setItem('metas-semana-admin', JSON.stringify(updatedMetas));
+        setAllMetasSemana(updatedMetas);
         alert("Meta da semana adicionada com sucesso!");
       }
       
-      localStorage.setItem('metas-semana-admin', JSON.stringify(existingMetas));
-      
-      // Atualizar estado local
-      setAllMetasSemana(existingMetas);
-      setStats(prev => ({ ...prev, metasSemana: existingMetas.length }));
-      
+      setStats(prev => ({ ...prev, metasSemana: JSON.parse(localStorage.getItem('metas-semana-admin') || '[]').length }));
       handleCloseModals();
     } catch (error) {
       alert("Erro ao salvar meta da semana.");
@@ -717,7 +983,6 @@ const AdminPage = () => {
   const handleDeleteMetaSemana = async (id) => {
     if (window.confirm("Tem certeza que deseja apagar esta meta da semana?")) {
       try {
-        // Remove do localStorage
         const existingMetas = JSON.parse(localStorage.getItem('metas-semana-admin') || '[]');
         const updatedMetas = existingMetas.filter(m => m.id !== id);
         localStorage.setItem('metas-semana-admin', JSON.stringify(updatedMetas));
@@ -737,7 +1002,11 @@ const AdminPage = () => {
   const handleDeleteCourse = async (id) => {
       if (window.confirm("Tem certeza que deseja apagar este curso?")) {
           try {
-              await deleteDoc(doc(db, 'courses', id));
+              const existingCourses = JSON.parse(localStorage.getItem('courses-admin') || '[]');
+              const updatedCourses = existingCourses.filter(course => course.id !== id);
+              localStorage.setItem('courses-admin', JSON.stringify(updatedCourses));
+              setAllCourses(updatedCourses);
+              setStats(prev => ({ ...prev, courses: updatedCourses.length }));
               alert("Curso removido com sucesso!");
           } catch (error) {
               alert("Erro ao deletar curso.");
@@ -779,6 +1048,7 @@ const AdminPage = () => {
               <UserPlus size={18} />
               <span>Novo Usuário</span>
             </button>
+            <ResetAllDataButton currentUser={currentUser} userRole={userRole} />
           </div>
         </div>
       </div>
@@ -4643,6 +4913,7 @@ const AdminPage = () => {
       `}</style>
     </div>
   );
-};
+// ...
 
+}
 export default AdminPage;

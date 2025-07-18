@@ -22,164 +22,16 @@ import {
 
 const MrRepresentacoes = () => {
   // Estado das tarefas de rotina
-  const [routineTasks, setRoutineTasks] = useState([
-    { 
-      id: 1, 
-      text: 'Postar nos stories do WhatsApp as novidades', 
-      frequency: 'Diária', 
-      completed: false, 
-      icon: MessageCircle,
-      lastCompleted: null
-    },
-    { 
-      id: 2, 
-      text: 'Postar nos stories do Instagram da MR', 
-      frequency: 'Diária', 
-      completed: false, 
-      icon: Instagram,
-      lastCompleted: null
-    },
-    { 
-      id: 3, 
-      text: 'Mandar mensagem para páginas que a MR segue', 
-      frequency: 'Diária', 
-      completed: false, 
-      icon: Send,
-      lastCompleted: null
-    },
-    { 
-      id: 4, 
-      text: 'Fazer a comunicação com os clientes', 
-      frequency: 'Segunda-feira', 
-      completed: false, 
-      icon: Phone,
-      lastCompleted: null
-    },
-    { 
-      id: 5, 
-      text: 'Ligar para clientes pequenos da lista "A"', 
-      frequency: 'Semanal', 
-      completed: false, 
-      icon: Phone,
-      lastCompleted: null
-    },
-  ]);
+  const [routineTasks, setRoutineTasks] = useState([]);
 
   // Estado das atividades delegadas pelo representante
-  const [delegatedTasks, setDelegatedTasks] = useState([
-    { 
-      id: 6, 
-      text: 'Enviar cópia do pedido #5821 para Cliente Exemplo A', 
-      company: 'Cliente A', 
-      completed: false, 
-      icon: FileStack,
-      priority: 'Alta',
-      deadline: '2025-07-15'
-    },
-    { 
-      id: 7, 
-      text: 'Confirmar recebimento da proposta com Cliente Exemplo B', 
-      company: 'Cliente B', 
-      completed: false, 
-      icon: CheckSquare,
-      priority: 'Média',
-      deadline: '2025-07-16'
-    },
-    { 
-      id: 8, 
-      text: 'Enviar documentação atualizada para Cliente C', 
-      company: 'Cliente C', 
-      completed: false, 
-      icon: FileStack,
-      priority: 'Baixa',
-      deadline: '2025-07-18'
-    },
-  ]);
+  const [delegatedTasks, setDelegatedTasks] = useState([]);
 
   // Estado das solicitações e propostas
-  const [proposals, setProposals] = useState([
-    { 
-      id: 9, 
-      text: 'Preparar e enviar proposta para Solicitação #102', 
-      status: 'Aguardando Ação', 
-      completed: false, 
-      icon: Send,
-      client: 'Empresa XYZ',
-      value: 'R$ 15.000'
-    },
-    { 
-      id: 10, 
-      text: 'Enviar documentação complementar para Licitação #334', 
-      status: 'Pendente', 
-      completed: false, 
-      icon: FileStack,
-      client: 'Prefeitura Municipal',
-      value: 'R$ 25.000'
-    },
-    { 
-      id: 11, 
-      text: 'Acompanhar status da proposta #445', 
-      status: 'Em Análise', 
-      completed: false, 
-      icon: Eye,
-      client: 'Indústria ABC',
-      value: 'R$ 8.500'
-    }
-  ]);
+  const [proposals, setProposals] = useState([]);
 
   // Estado das licitações detalhadas
-  const [biddings, setBiddings] = useState([
-    {
-      id: 1,
-      number: 'LIC-2025-001',
-      title: 'Fornecimento de Embalagens para Prefeitura',
-      client: 'Prefeitura Municipal de São Paulo',
-      value: 'R$ 45.000,00',
-      openingDate: '2025-07-20',
-      deliveryDate: '2025-08-15',
-      currentStage: 'Proposta Enviada',
-      progress: 60,
-      nextAction: 'Aguardar resultado da habilitação',
-      documents: [
-        { name: 'Proposta Comercial', status: 'enviado', required: true },
-        { name: 'Documentação de Habilitação', status: 'enviado', required: true },
-        { name: 'Certidões', status: 'enviado', required: true },
-        { name: 'Catálogo de Produtos', status: 'pendente', required: false }
-      ],
-      timeline: [
-        { stage: 'Edital Publicado', date: '2025-07-01', status: 'completed' },
-        { stage: 'Proposta Enviada', date: '2025-07-15', status: 'completed' },
-        { stage: 'Habilitação', date: '2025-07-20', status: 'current' },
-        { stage: 'Análise de Propostas', date: '2025-07-25', status: 'pending' },
-        { stage: 'Resultado Final', date: '2025-08-01', status: 'pending' }
-      ]
-    },
-    {
-      id: 2,
-      number: 'LIC-2025-002',
-      title: 'Licitação para Embalagens Hospitalares',
-      client: 'Hospital Regional',
-      value: 'R$ 28.500,00',
-      openingDate: '2025-07-25',
-      deliveryDate: '2025-08-30',
-      currentStage: 'Preparando Documentação',
-      progress: 30,
-      nextAction: 'Finalizar proposta técnica',
-      documents: [
-        { name: 'Proposta Comercial', status: 'rascunho', required: true },
-        { name: 'Proposta Técnica', status: 'pendente', required: true },
-        { name: 'Documentação de Habilitação', status: 'pendente', required: true },
-        { name: 'Atestados de Capacidade', status: 'pendente', required: true }
-      ],
-      timeline: [
-        { stage: 'Edital Publicado', date: '2025-07-10', status: 'completed' },
-        { stage: 'Proposta Enviada', date: '2025-07-25', status: 'pending' },
-        { stage: 'Habilitação', date: '2025-07-26', status: 'pending' },
-        { stage: 'Análise de Propostas', date: '2025-08-01', status: 'pending' },
-        { stage: 'Resultado Final', date: '2025-08-10', status: 'pending' }
-      ]
-    }
-  ]);
+  const [biddings, setBiddings] = useState([]);
 
   const [currentDate, setCurrentDate] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -1121,7 +973,7 @@ const MrRepresentacoes = () => {
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         .mr-page {
           padding: 2rem;
           background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);

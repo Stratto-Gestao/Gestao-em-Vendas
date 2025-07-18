@@ -13,93 +13,143 @@ service cloud.firestore {
       return request.auth.token.role == 'SUPER_ADMIN';
     }
 
-    // Users Collection
-    match /users/{userId} {
-      // Admins can do anything. Users can read their own data.
-      allow read: if isAdmin() || request.auth.uid == userId;
-      allow create: if isAdmin(); // Only admins can create users
-      allow update, delete: if isAdmin();
-    }
-    match /users {
-      // Only admins can list all users.
-      allow list: if isAdmin();
+    // Helper function to check for SDR role
+    function isSDR() {
+      return request.auth.token.role == 'USER_SDR';
     }
 
-    // Tarefas Collection - Novas regras específicas
+    // Helper function to check for Vendedor role
+    function isVendedor() {
+      return request.auth.token.role == 'USER_VENDEDOR';
+    }
+
+    // Helper function to check for MR role
+    function isMR() {
+      return request.auth.token.role == 'MR_RESPONSAVEL';
+    }
+
+    // Helper function to check if user has any admin role
+    function hasAdminRole() {
+      return request.auth.token.role in ['SUPER_ADMIN', 'ADMIN_OPERACIONAL', 'ADMIN_CONTEUDO', 'ADMIN_GAMIFICACAO'];
+    }
+
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Users Collection
+    match /users/{userId} {
+      // SUPER_ADMIN can do anything. Users can read their own data.
+      allow read: if isSuperAdmin() || request.auth.uid == userId;
+      allow create: if isSuperAdmin() || isAuthenticated(); // Authenticated users can create
+      allow update, delete: if isSuperAdmin() || request.auth.uid == userId;
+    }
+    match /users {
+      // Authenticated users can list users
+      allow list: if isAuthenticated();
+    }
+
+    // Leads Collection - Acesso completo para usuários autenticados
+    match /leads/{leadId} {
+      // SUPER_ADMIN tem acesso a absolutamente tudo
+      allow read, write: if isSuperAdmin();
+      // SDR tem acesso completo a leads
+      allow read, write: if isSDR();
+      // Vendedor pode ler leads que foram passados para ele
+      allow read: if isVendedor();
+      // Admins têm acesso completo
+      allow read, write: if hasAdminRole();
+      // Authenticated users podem ler e criar leads
+      allow read, write: if isAuthenticated();
+    }
+    match /leads {
+      // Authenticated users podem listar leads
+      allow list: if isAuthenticated();
+    }
+
+    // Tarefas Collection - Acesso completo para usuários autenticados
     match /tarefas/{tarefaId} {
+      // SUPER_ADMIN, SDR, and Vendedor can do anything with tasks
+      allow read, write: if isSuperAdmin() || isSDR() || isVendedor() || hasAdminRole();
       // Authenticated users can read and create their own tasks
-      allow read, create: if request.auth.uid != null;
-      // Only the owner can update their tasks
-      allow update: if request.auth.uid == resource.data.criadoPor || request.auth.uid == resource.data.responsavel;
-      // Only SUPER_ADMIN can delete tasks
-      allow delete: if isSuperAdmin();
+      allow read, write: if isAuthenticated();
     }
     match /tarefas {
-      // Authenticated users can list tasks
-      allow list: if request.auth.uid != null;
+      // Authenticated users can list all tasks
+      allow list: if isAuthenticated();
+    }
+
+    // Vendas Collection - Para sistema de vendas
+    match /vendas/{vendaId} {
+      // SUPER_ADMIN tem acesso a absolutamente tudo
+      allow read, write: if isSuperAdmin();
+      // SDR tem acesso completo
+      allow read, write: if isSDR();
+      // Vendedor tem acesso completo
+      allow read, write: if isVendedor();
+      // Admins têm acesso completo
+      allow read, write: if hasAdminRole();
+      // Authenticated users podem ler e criar vendas
+      allow read, write: if isAuthenticated();
+    }
+
+    // Clientes Collection - Para sistema de clientes
+    match /clientes/{clienteId} {
+      // SUPER_ADMIN tem acesso a absolutamente tudo
+      allow read, write: if isSuperAdmin();
+      // SDR tem acesso completo
+      allow read, write: if isSDR();
+      // Vendedor tem acesso completo
+      allow read, write: if isVendedor();
+      // Admins têm acesso completo
+      allow read, write: if hasAdminRole();
+      // Authenticated users podem ler e criar clientes
+      allow read, write: if isAuthenticated();
+    }
+
+    // Gamificacao Collection - Para sistema de gamificação
+    match /gamificacao/{gamificacaoId} {
+      // SUPER_ADMIN tem acesso a absolutamente tudo
+      allow read, write: if isSuperAdmin();
+      // SDR tem acesso completo
+      allow read, write: if isSDR();
+      // Vendedor tem acesso completo
+      allow read, write: if isVendedor();
+      // Admins têm acesso completo
+      allow read, write: if hasAdminRole();
+      // Authenticated users podem ler dados de gamificação
+      allow read, write: if isAuthenticated();
+    }
+
+    // Academia Collection - Para sistema de academia
+    match /academia/{academiaId} {
+      // SUPER_ADMIN tem acesso a absolutamente tudo
+      allow read, write: if isSuperAdmin();
+      // SDR tem acesso completo
+      allow read, write: if isSDR();
+      // Vendedor pode ler conteúdos da academia
+      allow read: if isVendedor();
+      // Admins têm acesso completo
+      allow read, write: if hasAdminRole();
+      // Authenticated users podem ler conteúdos da academia
+      allow read, write: if isAuthenticated();
     }
 
     // Historico Collection - Para dados históricos das tarefas
     match /historico/{historicoId} {
+      // SDR, Vendedor, and admins have full access
+      allow read, write: if isSuperAdmin() || isSDR() || isVendedor() || hasAdminRole();
       // Authenticated users can read and create historical data
-      allow read, create: if request.auth.uid != null;
-      // Only the owner can update
-      allow update: if request.auth.uid == resource.data.criadoPor;
-      // Only SUPER_ADMIN can delete historical data
-      allow delete: if isSuperAdmin();
+      allow read, write: if isAuthenticated();
     }
 
-    // Modules Collection
-    match /modules/{moduleId} {
-      // Authenticated users can read modules. Admins can write.
-      allow read: if request.auth.uid != null;
-      allow write: if isAdmin();
-    }
-    match /modules {
-        // Only admins can list all modules.
-        allow list: if isAdmin();
-    }
-
-    // Articles Collection
-    match /articles/{articleId} {
-      // Authenticated users can read articles. Admins can write.
-      allow read: if request.auth.uid != null;
-      allow write: if isAdmin();
-    }
-    match /articles {
-        // Only admins can list all articles.
-        allow list: if isAdmin();
-    }
-
-    // Scripts Collection
-    match /scripts/{scriptId} {
-      // Authenticated users can read scripts. Admins can write.
-      allow read: if request.auth.uid != null;
-      allow write: if isAdmin();
-    }
-    match /scripts {
-        // Only admins can list all scripts.
-        allow list: if isAdmin();
-    }
-
-    // Vendas Collection - Para controle de vendas
-    match /vendas/{vendaId} {
-      // Authenticated users can read/write their own data
-      allow read, write: if request.auth != null && 
-        (request.auth.uid == resource.data.userId || 
-         request.auth.uid == request.resource.data.userId);
-      // Admins can access all sales data
-      allow read, write: if isAdmin();
-    }
-
-    // Faturamentos Collection - Para controle de faturamentos
-    match /faturamentos/{faturamentoId} {
-      // Authenticated users can read/write their own data
-      allow read, write: if request.auth != null && 
-        (request.auth.uid == resource.data.userId || 
-         request.auth.uid == request.resource.data.userId);
-      // Admins can access all billing data
-      allow read, write: if isAdmin();
+    // Catch-all rule for other collections
+    match /{document=**} {
+      // SUPER_ADMIN has access to everything
+      allow read, write: if isSuperAdmin();
+      // Authenticated users can read and write
+      allow read, write: if isAuthenticated();
     }
   }
 }

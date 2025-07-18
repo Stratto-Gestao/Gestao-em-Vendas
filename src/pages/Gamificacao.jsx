@@ -222,7 +222,7 @@ const Gamificacao = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         /* Animações e Estilos Globais */
         @keyframes fadeInUp {
           from { opacity: 0; transform: translateY(20px); }

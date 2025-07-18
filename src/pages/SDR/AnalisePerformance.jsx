@@ -341,7 +341,7 @@ function AnalisePerformance() {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         .performance-page {
           padding: 2rem;
           background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);

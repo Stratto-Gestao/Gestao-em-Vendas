@@ -17,78 +17,8 @@ function TarefasDiarias() {
   const isSuperAdmin = userRole === 'SUPER_ADMIN';
   
   // Dados iniciais (serão carregados do localStorage se existirem)
-  const tarefasIniciais = [
-    {
-      id: 1,
-      titulo: 'Ligar para leads quentes',
-      descricao: 'Fazer follow-up com 15 leads qualificados da semana passada',
-      tipo: 'Ligações',
-      prioridade: 'Alta',
-      status: 'Em andamento',
-      tempoEstimado: '2h',
-      tempoGasto: '45min',
-      progresso: 40,
-      criadoEm: '2024-07-12T08:00:00',
-      prazo: '2024-07-12T17:00:00',
-      responsavel: 'Você',
-      tags: ['vendas', 'follow-up'],
-      categoria: 'Prospecção',
-      criadoPor: 'admin'
-    },
-    {
-      id: 2,
-      titulo: 'Qualificar novos leads',
-      descricao: 'Analisar e qualificar 25 novos leads recebidos hoje',
-      tipo: 'Qualificação',
-      prioridade: 'Média',
-      status: 'Pendente',
-      tempoEstimado: '1.5h',
-      tempoGasto: '0min',
-      progresso: 0,
-      criadoEm: '2024-07-12T09:00:00',
-      prazo: '2024-07-12T15:00:00',
-      responsavel: 'Você',
-      tags: ['qualificação', 'leads'],
-      categoria: 'Análise',
-      criadoPor: 'admin'
-    },
-    {
-      id: 3,
-      titulo: 'Enviar proposta para TechStart',
-      descricao: 'Finalizar e enviar proposta comercial personalizada',
-      tipo: 'Proposta',
-      prioridade: 'Alta',
-      status: 'Concluída',
-      tempoEstimado: '1h',
-      tempoGasto: '55min',
-      progresso: 100,
-      criadoEm: '2024-07-12T10:00:00',
-      prazo: '2024-07-12T14:00:00',
-      responsavel: 'Você',
-      tags: ['proposta', 'cliente'],
-      categoria: 'Vendas',
-      criadoPor: 'admin'
-    },
-    {
-      id: 4,
-      titulo: 'Reunião de alinhamento',
-      descricao: 'Participar da reunião semanal de alinhamento da equipe',
-      tipo: 'Reunião',
-      prioridade: 'Média',
-      status: 'Agendada',
-      tempoEstimado: '30min',
-      tempoGasto: '0min',
-      progresso: 0,
-      criadoEm: '2024-07-12T11:00:00',
-      prazo: '2024-07-12T16:00:00',
-      responsavel: 'Equipe',
-      tags: ['reunião', 'alinhamento'],
-      categoria: 'Administrativo',
-      criadoPor: 'admin'
-    }
-  ];
+  const tarefasIniciais = [];
 
-  // Carregar dados do localStorage ou usar dados iniciais
   const [tarefas, setTarefas] = useState(() => {
     const savedTarefas = localStorage.getItem('tarefas');
     return savedTarefas ? JSON.parse(savedTarefas) : tarefasIniciais;
@@ -96,64 +26,12 @@ function TarefasDiarias() {
 
   const [historicoTarefas, setHistoricoTarefas] = useState(() => {
     const savedHistorico = localStorage.getItem('historicoTarefas');
-    return savedHistorico ? JSON.parse(savedHistorico) : [
-      {
-        id: 101,
-        titulo: 'Apresentação para GlobalCorp',
-        descricao: 'Demo do produto para tomadores de decisão',
-        status: 'Concluída',
-        tempoGasto: '1h 30min',
-        concluida: '2024-07-12T14:30:00',
-        resultado: 'Positivo - Agendar próxima reunião',
-        categoria: 'Vendas'
-      },
-      {
-        id: 102,
-        titulo: 'Follow-up email campaign',
-        descricao: 'Envio de 50 emails de follow-up personalizados',
-        status: 'Concluída',
-        tempoGasto: '45min',
-        concluida: '2024-07-12T12:15:00',
-        resultado: '12 respostas recebidas',
-        categoria: 'Marketing'
-      },
-      {
-        id: 103,
-        titulo: 'Atualização CRM',
-        descricao: 'Atualizar informações de 30 leads no sistema',
-        status: 'Concluída',
-        tempoGasto: '25min',
-        concluida: '2024-07-12T11:45:00',
-        resultado: 'CRM atualizado com sucesso',
-        categoria: 'Administrativo'
-      }
-    ];
+    return savedHistorico ? JSON.parse(savedHistorico) : [];
   });
 
   const [historicoSemana, setHistoricoSemana] = useState(() => {
     const savedHistoricoSemana = localStorage.getItem('historicoSemana');
-    return savedHistoricoSemana ? JSON.parse(savedHistoricoSemana) : [
-      {
-        id: 201,
-        titulo: 'Negociação com MegaCorp',
-        descricao: 'Fechamento de contrato anual',
-        status: 'Concluída',
-        tempoGasto: '3h 20min',
-        concluida: '2024-07-10T16:45:00',
-        resultado: 'Contrato fechado - R$ 250.000',
-        categoria: 'Vendas'
-      },
-      {
-        id: 202,
-        titulo: 'Treinamento equipe',
-        descricao: 'Apresentação sobre novas funcionalidades',
-        status: 'Concluída',
-        tempoGasto: '2h',
-        concluida: '2024-07-09T14:00:00',
-        resultado: 'Equipe capacitada com sucesso',
-        categoria: 'Treinamento'
-      }
-    ];
+    return savedHistoricoSemana ? JSON.parse(savedHistoricoSemana) : [];
   });
 
   const [novaTarefa, setNovaTarefa] = useState({
@@ -496,7 +374,7 @@ function TarefasDiarias() {
 
   const handleLimparHistoricoSemana = () => {
     if (!isSuperAdmin) {
-      alert('Apenas administradores podem limpar o histórico da semana!');
+      alert('Apenas SUPER_ADMIN pode limpar o histórico da semana!');
       return;
     }
     
@@ -673,7 +551,7 @@ function TarefasDiarias() {
               <button 
                 className="action-btn danger"
                 onClick={handleLimparHistoricoSemana}
-                title="Limpar histórico da semana (Apenas Admin)"
+                title="Limpar histórico da semana (Apenas SUPER_ADMIN)"
               >
                 <Archive size={16} />
                 Limpar Histórico Semana
@@ -783,7 +661,7 @@ function TarefasDiarias() {
               <div className="stat-label">Histórico Semana</div>
               <div className="stat-trend">
                 <History size={12} />
-                Admin view
+                SUPER_ADMIN
               </div>
             </div>
           </div>
@@ -799,7 +677,7 @@ function TarefasDiarias() {
               <div className="stat-label">Histórico Dia</div>
               <div className="stat-trend">
                 <Calendar size={12} />
-                Admin view
+                SUPER_ADMIN
               </div>
             </div>
           </div>
@@ -1000,7 +878,7 @@ function TarefasDiarias() {
                     {isSuperAdmin && (
                       <button 
                         className="task-action-btn danger" 
-                        title="Excluir (Apenas Admin)"
+                        title="Excluir (Apenas SUPER_ADMIN)"
                         onClick={() => handleExcluirTarefa(tarefa)}
                       >
                         <Trash2 size={16} />
@@ -1479,12 +1357,14 @@ function TarefasDiarias() {
 
             <div className="modal-actions">
               <button 
+                type="button" 
                 className="btn-cancel"
                 onClick={() => setShowResetModal(false)}
               >
                 Cancelar
               </button>
               <button 
+                type="button" 
                 className="btn-warning"
                 onClick={confirmarReset}
               >
@@ -1560,7 +1440,7 @@ function TarefasDiarias() {
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         .tarefas-diarias-page {
           padding: 2rem;
           background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
@@ -2550,6 +2430,126 @@ function TarefasDiarias() {
         .close-btn {
           background: none;
           border: none;
+          font-size: 1.5rem;
+          color: #64748b;
+          cursor: pointer;
+          padding: 0.25rem;
+          transition: all 0.3s ease;
+        }
+
+        .close-btn:hover {
+          color: #1e293b;
+          transform: scale(1.1);
+        }
+
+        .task-form {
+          display: flex;
+          flex-direction: column;
+          gap: 1.5rem;
+        }
+
+        .form-group {
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+        }
+
+        .form-label {
+          font-size: 0.875rem;
+          font-weight: 600;
+          color: #374151;
+        }
+
+        .form-input, .form-textarea, .form-select {
+          padding: 0.75rem 1rem;
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          border-radius: 8px;
+          background: rgba(255, 255, 255, 0.6);
+          backdrop-filter: blur(8px);
+          color: #1e293b;
+          font-size: 0.875rem;
+          transition: all 0.3s ease;
+        }
+
+        .form-input:focus, .form-textarea:focus, .form-select:focus {
+          outline: none;
+          border-color: #3b82f6;
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+          background: rgba(255, 255, 255, 0.9);
+          transform: translateY(-1px);
+        }
+
+        .form-row {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 1rem;
+        }
+
+        .modal-actions {
+          display: flex;
+          justify-content: flex-end;
+          gap: 1rem;
+          margin-top: 2rem;
+          padding-top: 1rem;
+          border-top: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-cancel, .btn-save, .btn-danger, .btn-warning {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.75rem 1.5rem;
+          border-radius: 8px;
+          font-weight: 600;
+          font-size: 0.875rem;
+          border: none;
+          cursor: pointer;
+          transition: all 0.3s ease;
+        }
+
+        .btn-cancel {
+          background: rgba(255, 255, 255, 0.8);
+          backdrop-filter: blur(10px);
+          color: #475569;
+          border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-cancel:hover {
+          background: rgba(255, 255, 255, 0.95);
+          transform: translateY(-1px);
+        }
+
+        .btn-save {
+          background: linear-gradient(135deg, #10b981, #059669);
+          color: white;
+          box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-save:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-danger {
+          background: linear-gradient(135deg, #ef4444, #dc2626);
+          color: white;
+          box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-danger:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
+        }
+
+        .btn-warning {
+          background: linear-gradient(135deg, #f59e0b, #d97706);
+          color: white;
+          box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+        }
+
+        .btn-warning:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 25px rgba(245, 158, 11, 0.4);
           font-size: 1.5rem;
           color: #64748b;
           cursor: pointer;
