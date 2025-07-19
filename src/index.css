@@ -1,5 +1,12 @@
 /* Google Fonts Import - DEVE VIR PRIMEIRO */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+/* Tailwind CSS directives */
+/* PostCSS will process these @tailwind directives */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* === FONTES E RESET BÁSICO === */
 
 :root {
@@ -1685,7 +1692,7 @@ body {
 .menu-icon-qualification { color: #f59e0b; }
 .menu-icon-ai { color: #8b5cf6; }
 .menu-icon-handoff { color: #06b6d4; }
-.menu-icon-performance { color: #ec4899; }
+
 .menu-icon-knowledge { color: #f59e0b; }
 
 /* Animação de Entrada */

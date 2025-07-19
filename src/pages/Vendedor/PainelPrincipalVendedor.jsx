@@ -14,6 +14,8 @@ import {
   Search, X, Save, Copy, Share2, Maximize2, Minimize2,
   Gift
 } from 'lucide-react';
+import { db } from '../../config/firebase';
+import { collection, getDocs, onSnapshot } from 'firebase/firestore';
 
 const PainelPrincipalVendedor = () => {
   const [currentDateTime, setCurrentDateTime] = useState('');
@@ -150,7 +152,58 @@ const PainelPrincipalVendedor = () => {
   }, [showNotifications]);
 
   // Função para carregar dados das outras páginas
-  const loadDashboardData = () => {
+  const loadDashboardData = async () => {
+    // Carregar dados do Firebase primeiro
+    try {
+      // Carregar negócios do Firebase
+      const negociosSnapshot = await getDocs(collection(db, 'negocios'));
+      const negociosFirebase = negociosSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      if (negociosFirebase.length > 0) {
+        setNegocios(negociosFirebase);
+      } else {
+        // Fallback para localStorage
+        const savedNegocios = localStorage.getItem('negocios');
+        if (savedNegocios) {
+          setNegocios(JSON.parse(savedNegocios));
+        }
+      }
+      
+      // Carregar clientes do Firebase
+      const clientesSnapshot = await getDocs(collection(db, 'clientes'));
+      const clientesFirebase = clientesSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      if (clientesFirebase.length > 0) {
+        setClientes(clientesFirebase);
+      } else {
+        // Fallback para localStorage
+        const savedClientes = localStorage.getItem('clientes');
+        if (savedClientes) {
+          setClientes(JSON.parse(savedClientes));
+        }
+      }
+      
+    } catch (error) {
+      console.log('Erro ao carregar dados do Firebase, usando localStorage:', error);
+      
+      // Fallback para localStorage
+      const savedNegocios = localStorage.getItem('negocios');
+      if (savedNegocios) {
+        setNegocios(JSON.parse(savedNegocios));
+      }
+      
+      const savedClientes = localStorage.getItem('clientes');
+      if (savedClientes) {
+        setClientes(JSON.parse(savedClientes));
+      }
+    }
+    
     // Carregar vendas mensais
     const savedVendasMensais = localStorage.getItem('vendas-mensais-vendedor');
     const vendasMensais = savedVendasMensais ? JSON.parse(savedVendasMensais) : {

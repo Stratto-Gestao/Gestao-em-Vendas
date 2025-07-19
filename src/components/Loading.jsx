@@ -7,7 +7,11 @@ const Loading = () => {
       <div className="text-center">
         <div className="relative">
           {/* Círculo externo */}
-          <div className="w-24 h-24 border-4 border-white/20 rounded-full animate-spin border-t-white/80 mx-auto mb-4"></div>
+          <div 
+            className="w-24 h-24 border-4 border-white/20 rounded-full animate-spin border-t-white/80 mx-auto mb-4"
+            role="status"
+            aria-label="Carregando"
+          ></div>
           
           {/* Logo no centro */}
           <div className="absolute inset-0 flex items-center justify-center">

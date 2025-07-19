@@ -22,7 +22,6 @@
 // * - Qualificacao
  * - AssistenteIA
  * - PassagemVendas
- * - AnalisePerformance
  * - TarefasDiarias
  * 
  * Correções implementadas:

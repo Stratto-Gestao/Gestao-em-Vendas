@@ -3,153 +3,318 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check for admin role
-    function isAdmin() {
-      return request.auth.token.admin == true;
-    }
-
-    // Helper function to check for SUPER_ADMIN role
-    function isSuperAdmin() {
-      return request.auth.token.role == 'SUPER_ADMIN';
-    }
-
-    // Helper function to check for SDR role
-    function isSDR() {
-      return request.auth.token.role == 'USER_SDR';
-    }
-
-    // Helper function to check for Vendedor role
-    function isVendedor() {
-      return request.auth.token.role == 'USER_VENDEDOR';
-    }
-
-    // Helper function to check for MR role
-    function isMR() {
-      return request.auth.token.role == 'MR_RESPONSAVEL';
-    }
-
-    // Helper function to check if user has any admin role
-    function hasAdminRole() {
-      return request.auth.token.role in ['SUPER_ADMIN', 'ADMIN_OPERACIONAL', 'ADMIN_CONTEUDO', 'ADMIN_GAMIFICACAO'];
-    }
-
-    // Helper function to check if user is authenticated
+    // --- Funções Auxiliares (Helpers) ---
     function isAuthenticated() {
       return request.auth != null;
     }
+    function getRole() {
+      return request.auth.token.role;
+    }
+    function isSuperAdmin() {
+      return getRole() == 'SUPER_ADMIN';
+    }
+    function hasAdminPrivileges() {
+      return getRole() == 'SUPER_ADMIN' || getRole() == 'ADMIN_OPERACIONAL';
+    }
+    function isContentAdmin() {
+      return getRole() == 'ADMIN_CONTEUDO' || isSuperAdmin();
+    }
+    function isGamificationAdmin() {
+      return getRole() == 'ADMIN_GAMIFICACAO' || isSuperAdmin();
+    }
+    function isSDR() {
+      return getRole() == 'USER_SDR';
+    }
+    function isVendedor() {
+      return getRole() == 'USER_VENDEDOR';
+    }
+    function isSDRorVendedor() {
+      return isSDR() || isVendedor();
+    }
+    function isMrResponsible() {
+      return getRole() == 'MR_RESPONSAVEL';
+    }
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    function isResponsible() {
+      return request.auth.uid == resource.data.responsavelId;
+    }
 
-    // Users Collection
+    // --- Regras por Coleção ---
+
+    // Coleção de Usuários (users)
     match /users/{userId} {
-      // SUPER_ADMIN can do anything. Users can read their own data.
-      allow read: if isSuperAdmin() || request.auth.uid == userId;
-      allow create: if isSuperAdmin() || isAuthenticated(); // Authenticated users can create
-      allow update, delete: if isSuperAdmin() || request.auth.uid == userId;
-    }
-    match /users {
-      // Authenticated users can list users
-      allow list: if isAuthenticated();
+      allow get: if hasAdminPrivileges() || isOwner(userId);
+      allow list, create, update, delete: if hasAdminPrivileges();
     }
 
-    // Leads Collection - Acesso completo para usuários autenticados
+    // Coleção de Leads (SDR)
     match /leads/{leadId} {
-      // SUPER_ADMIN tem acesso a absolutamente tudo
+      allow create: if isSDR() || hasAdminPrivileges();
+      allow read, update: if hasAdminPrivileges() || (isSDR() && isResponsible());
+      allow delete: if hasAdminPrivileges();
+    }
+
+    // Coleção de Negócios/Deals (Vendedor)
+    match /deals/{dealId} {
+      allow create: if isSDRorVendedor() || hasAdminPrivileges();
+      allow read, update: if hasAdminPrivileges() || (isVendedor() && isResponsible());
+      allow delete: if hasAdminPrivileges();
+    }
+
+    // Coleção de Clientes (Vendedor)
+    match /clients/{clientId} {
+      allow create: if isVendedor() || hasAdminPrivileges();
+      allow read, update: if hasAdminPrivileges() || (isVendedor() && isResponsible());
+      allow delete: if hasAdminPrivileges();
+    }
+
+    // Coleção de Tarefas (SDR e Vendedor)
+    match /tasks/{taskId} {
+      allow create, read, update: if hasAdminPrivileges() || (isSDRorVendedor() && isResponsible());
+      allow delete: if hasAdminPrivileges();
+    }
+
+    // Coleção de Atividades de Clientes (Vendedor)
+    match /client_activities/{activityId} {
+      allow create, read, update: if hasAdminPrivileges() || isVendedor();
+      allow delete: if hasAdminPrivileges();
+    }
+
+    // Coleção de Propostas (Vendedor)
+    match /proposals/{proposalId} {
+      allow create, read, update: if hasAdminPrivileges() || isVendedor();
+      allow delete: if hasAdminPrivileges();
+    }
+
+    // Coleção de Reuniões/Eventos (SDR e Vendedor)
+    match /meetings/{meetingId} {
+      allow create, read, update: if hasAdminPrivileges() || (isSDRorVendedor() && isResponsible());
+      allow delete: if hasAdminPrivileges();
+    }
+
+    // Coleção de Ligações/Calls (SDR e Vendedor)
+    match /calls/{callId} {
+      allow create, read, update: if hasAdminPrivileges() || (isSDRorVendedor() && isResponsible());
+      allow delete: if hasAdminPrivileges();
+    }
+
+    // Coleção de Emails (SDR e Vendedor)
+    match /emails/{emailId} {
+      allow create, read, update: if hasAdminPrivileges() || (isSDRorVendedor() && isResponsible());
+      allow delete: if hasAdminPrivileges();
+    }
+
+    // Coleção de Follow-ups (SDR e Vendedor)
+    match /followups/{followupId} {
+      allow create, read, update: if hasAdminPrivileges() || (isSDRorVendedor() && isResponsible());
+      allow delete: if hasAdminPrivileges();
+    }
+
+    // Coleção de Notas (SDR e Vendedor)
+    match /notes/{noteId} {
+      allow create, read, update: if hasAdminPrivileges() || (isSDRorVendedor() && isResponsible());
+      allow delete: if hasAdminPrivileges();
+    }
+
+    // Coleção de Arquivos/Documentos (SDR e Vendedor)
+    match /documents/{documentId} {
+      allow create, read, update: if hasAdminPrivileges() || isSDRorVendedor();
+      allow delete: if hasAdminPrivileges();
+    }
+
+    // Coleção de Produtos/Serviços
+    match /products/{productId} {
+      allow read: if isSDRorVendedor() || hasAdminPrivileges();
+      allow write: if hasAdminPrivileges();
+    }
+
+    // Coleção de Métricas de Performance (SDR e Vendedor)
+    match /performance_metrics/{metricId} {
+      allow read: if hasAdminPrivileges() || (isSDRorVendedor() && isOwner(resource.data.userId));
+      allow create, update: if hasAdminPrivileges() || (isSDRorVendedor() && request.resource.data.userId == request.auth.uid);
+      allow delete: if hasAdminPrivileges();
+    }
+
+    // Coleção de Metas (SDR e Vendedor)
+    match /goals/{goalId} {
+      allow read: if hasAdminPrivileges() || (isSDRorVendedor() && isOwner(resource.data.userId));
+      allow create, update: if hasAdminPrivileges();
+      allow delete: if hasAdminPrivileges();
+    }
+
+    // Coleção de Comissões (Vendedor)
+    match /commissions/{commissionId} {
+      allow read: if hasAdminPrivileges() || (isVendedor() && isOwner(resource.data.userId));
+      allow create, update: if hasAdminPrivileges();
+      allow delete: if hasAdminPrivileges();
+    }
+
+    // Coleção de Relatórios (SDR e Vendedor)
+    match /reports/{reportId} {
+      allow read: if hasAdminPrivileges() || (isSDRorVendedor() && isOwner(resource.data.userId));
+      allow create, update: if hasAdminPrivileges() || (isSDRorVendedor() && request.resource.data.userId == request.auth.uid);
+      allow delete: if hasAdminPrivileges();
+    }
+
+    // Coleção de Notificações
+    match /notifications/{notificationId} {
+      allow read, update: if hasAdminPrivileges() || isOwner(resource.data.userId);
+      allow create: if hasAdminPrivileges();
+      allow delete: if hasAdminPrivileges() || isOwner(resource.data.userId);
+    }
+
+    // Coleção de Configurações de Usuário
+    match /user_settings/{userId} {
+      allow read, write: if hasAdminPrivileges() || isOwner(userId);
+    }
+
+    // Coleção de Histórico de Ações
+    match /action_history/{historyId} {
+      allow read: if hasAdminPrivileges() || isOwner(resource.data.userId);
+      allow create: if isAuthenticated();
+      allow update, delete: if hasAdminPrivileges();
+    }
+
+    // Coleção de Pipelines de Vendas
+    match /sales_pipelines/{pipelineId} {
+      allow read: if isSDRorVendedor() || hasAdminPrivileges();
+      allow write: if hasAdminPrivileges();
+    }
+
+    // Coleção de Estágios de Pipeline
+    match /pipeline_stages/{stageId} {
+      allow read: if isSDRorVendedor() || hasAdminPrivileges();
+      allow write: if hasAdminPrivileges();
+    }
+
+    // Coleção de Segmentos de Clientes
+    match /client_segments/{segmentId} {
+      allow read: if isSDRorVendedor() || hasAdminPrivileges();
+      allow write: if hasAdminPrivileges();
+    }
+
+    // Coleção de Campanhas de Marketing
+    match /campaigns/{campaignId} {
+      allow read: if isSDRorVendedor() || hasAdminPrivileges();
+      allow write: if hasAdminPrivileges();
+    }
+
+    // Coleção de Análises e Insights
+    match /analytics/{analyticsId} {
+      allow read: if hasAdminPrivileges() || (isSDRorVendedor() && isOwner(resource.data.userId));
+      allow create, update: if hasAdminPrivileges();
+      allow delete: if hasAdminPrivileges();
+    }
+
+    // Coleções da Academia / Base de Conhecimento
+    match /modules/{docId} {
+      allow read: if isSDRorVendedor() || hasAdminPrivileges();
+      allow write: if isContentAdmin();
+    }
+    match /articles/{docId} {
+      allow read: if isSDRorVendedor() || hasAdminPrivileges();
+      allow write: if isContentAdmin();
+    }
+    match /scripts/{docId} {
+      allow read: if isSDRorVendedor() || hasAdminPrivileges();
+      allow write: if isContentAdmin();
+    }
+
+    // --- Coleções de Scripts e Templates ---
+    match /coldCalls/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin();
+    }
+    match /whatsappScripts/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin();
+    }
+    match /objecoes/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin();
+    }
+    match /emailTemplates/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin();
+    }
+    match /courses/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isSuperAdmin();
+    }
+
+    // Coleções de Gamificação
+    match /gamification_public/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isGamificationAdmin();
+    }
+    match /gamification_user_stats/{userId} {
+      allow read: if isSDRorVendedor() || hasAdminPrivileges();
+      allow update: if isOwner(userId);
+      allow create, delete: if false;
+    }
+    match /gamification_redemptions/{redemptionId} {
+      allow create: if isSDRorVendedor() && request.resource.data.userId == request.auth.uid;
+      allow read: if hasAdminPrivileges() || (resource.data.userId == request.auth.uid);
+      allow update, delete: if isGamificationAdmin();
+    }
+
+    // Coleção de Licitações (MR)
+    match /licitacoes/{biddingId} {
+      allow read, write: if hasAdminPrivileges() || isMrResponsible();
+    }
+
+    // Coleção de Chats com IA
+    match /ai_chats/{chatId} {
+      allow read, write: if hasAdminPrivileges() || resource.data.userId == request.auth.uid;
+    }
+
+    // Coleção de Sessões de Chat IA (para histórico)
+    match /ai_chat_sessions/{sessionId} {
+      allow read, write: if hasAdminPrivileges() || resource.data.userId == request.auth.uid;
+    }
+
+    // Coleção de Backup/Logs de Sistema
+    match /system_logs/{logId} {
       allow read, write: if isSuperAdmin();
-      // SDR tem acesso completo a leads
-      allow read, write: if isSDR();
-      // Vendedor pode ler leads que foram passados para ele
-      allow read: if isVendedor();
-      // Admins têm acesso completo
-      allow read, write: if hasAdminRole();
-      // Authenticated users podem ler e criar leads
-      allow read, write: if isAuthenticated();
-    }
-    match /leads {
-      // Authenticated users podem listar leads
-      allow list: if isAuthenticated();
     }
 
-    // Tarefas Collection - Acesso completo para usuários autenticados
-    match /tarefas/{tarefaId} {
-      // SUPER_ADMIN, SDR, and Vendedor can do anything with tasks
-      allow read, write: if isSuperAdmin() || isSDR() || isVendedor() || hasAdminRole();
-      // Authenticated users can read and create their own tasks
-      allow read, write: if isAuthenticated();
-    }
-    match /tarefas {
-      // Authenticated users can list all tasks
-      allow list: if isAuthenticated();
+    // Coleção de Integrações (CRM, Email, etc.)
+    match /integrations/{integrationId} {
+      allow read: if isAuthenticated();
+      allow write: if hasAdminPrivileges();
     }
 
-    // Vendas Collection - Para sistema de vendas
-    match /vendas/{vendaId} {
-      // SUPER_ADMIN tem acesso a absolutamente tudo
-      allow read, write: if isSuperAdmin();
-      // SDR tem acesso completo
-      allow read, write: if isSDR();
-      // Vendedor tem acesso completo
-      allow read, write: if isVendedor();
-      // Admins têm acesso completo
-      allow read, write: if hasAdminRole();
-      // Authenticated users podem ler e criar vendas
-      allow read, write: if isAuthenticated();
+    // Coleção de Webhooks
+    match /webhooks/{webhookId} {
+      allow read: if hasAdminPrivileges();
+      allow write: if isSuperAdmin();
     }
 
-    // Clientes Collection - Para sistema de clientes
-    match /clientes/{clienteId} {
-      // SUPER_ADMIN tem acesso a absolutamente tudo
-      allow read, write: if isSuperAdmin();
-      // SDR tem acesso completo
-      allow read, write: if isSDR();
-      // Vendedor tem acesso completo
-      allow read, write: if isVendedor();
-      // Admins têm acesso completo
-      allow read, write: if hasAdminRole();
-      // Authenticated users podem ler e criar clientes
-      allow read, write: if isAuthenticated();
+    // Coleção de API Keys
+    match /api_keys/{keyId} {
+      allow read: if hasAdminPrivileges() || isOwner(resource.data.userId);
+      allow write: if hasAdminPrivileges();
     }
 
-    // Gamificacao Collection - Para sistema de gamificação
-    match /gamificacao/{gamificacaoId} {
-      // SUPER_ADMIN tem acesso a absolutamente tudo
-      allow read, write: if isSuperAdmin();
-      // SDR tem acesso completo
-      allow read, write: if isSDR();
-      // Vendedor tem acesso completo
-      allow read, write: if isVendedor();
-      // Admins têm acesso completo
-      allow read, write: if hasAdminRole();
-      // Authenticated users podem ler dados de gamificação
-      allow read, write: if isAuthenticated();
+    // Coleção de Feedbacks dos Usuários
+    match /user_feedback/{feedbackId} {
+      allow create: if isAuthenticated();
+      allow read: if hasAdminPrivileges() || isOwner(resource.data.userId);
+      allow update, delete: if hasAdminPrivileges();
     }
 
-    // Academia Collection - Para sistema de academia
-    match /academia/{academiaId} {
-      // SUPER_ADMIN tem acesso a absolutamente tudo
-      allow read, write: if isSuperAdmin();
-      // SDR tem acesso completo
-      allow read, write: if isSDR();
-      // Vendedor pode ler conteúdos da academia
-      allow read: if isVendedor();
-      // Admins têm acesso completo
-      allow read, write: if hasAdminRole();
-      // Authenticated users podem ler conteúdos da academia
-      allow read, write: if isAuthenticated();
+    // Coleção de Temas/Configurações Visuais
+    match /themes/{themeId} {
+      allow read: if isAuthenticated();
+      allow write: if hasAdminPrivileges();
     }
 
-    // Historico Collection - Para dados históricos das tarefas
-    match /historico/{historicoId} {
-      // SDR, Vendedor, and admins have full access
-      allow read, write: if isSuperAdmin() || isSDR() || isVendedor() || hasAdminRole();
-      // Authenticated users can read and create historical data
-      allow read, write: if isAuthenticated();
-    }
-
-    // Catch-all rule for other collections
-    match /{document=**} {
-      // SUPER_ADMIN has access to everything
-      allow read, write: if isSuperAdmin();
-      // Authenticated users can read and write
-      allow read, write: if isAuthenticated();
+    // Coleção de Idiomas/Localizações
+    match /localization/{localeId} {
+      allow read: if isAuthenticated();
+      allow write: if hasAdminPrivileges();
     }
   }
 }

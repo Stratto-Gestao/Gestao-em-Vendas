@@ -12,5 +12,10 @@ export default defineConfig({
     target: 'es2015',
     outDir: 'dist',
     sourcemap: false
+  },
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.js'],
+    globals: true,
   }
 })

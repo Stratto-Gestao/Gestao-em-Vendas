@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Award, Star, Trophy, Target, ShieldCheck, Zap, Gem, Crown, User, HelpCircle, Gift, Coffee, Headphones, Plane } from 'lucide-react';
+import { db } from '../config/firebase';
+import { collection, getDocs, addDoc, updateDoc, doc, onSnapshot } from 'firebase/firestore';
 
 const Gamificacao = () => {
-  // Mock data - Em uma aplicação real, estes dados viriam da sua API
+  // Estados para dados do usuário e ranking
   const [currentUserStats, setCurrentUserStats] = useState({
     points: 4280,
     rank: 4,
@@ -11,40 +13,90 @@ const Gamificacao = () => {
     nextLevelPoints: 5000,
   });
 
-  const [leaderboardData, setLeaderboardData] = useState([
-    { rank: 1, name: 'Ana Costa', points: 7150, avatar: 'AC', isCurrentUser: false, trend: 'up' },
-    { rank: 2, name: 'Bruno Silva', points: 6890, avatar: 'BS', isCurrentUser: false, trend: 'up' },
-    { rank: 3, name: 'Carlos Mendes', points: 5520, avatar: 'CM', isCurrentUser: false, trend: 'down' },
-    { rank: 4, name: 'Você', points: 4280, avatar: 'VC', isCurrentUser: true, trend: 'up' },
-    { rank: 5, name: 'Daniela Lima', points: 3910, avatar: 'DL', isCurrentUser: false, trend: 'down' },
-    { rank: 6, name: 'Eduardo Reis', points: 3750, avatar: 'ER', isCurrentUser: false, trend: 'up' },
-    { rank: 7, name: 'Fernanda Dias', points: 3400, avatar: 'FD', isCurrentUser: false, trend: 'up' },
-  ]);
+  const [leaderboardData, setLeaderboardData] = useState([]);
+  const [achievementsData, setAchievementsData] = useState([]);
+  const [missionsData, setMissionsData] = useState([]);
+  const [rewardsData, setRewardsData] = useState([]);
 
-  const [achievementsData, setAchievementsData] = useState([
-    { id: 1, name: 'Primeiro Negócio', icon: Star, unlocked: true, description: 'Feche seu primeiro negócio na plataforma.' },
-    { id: 2, name: 'Rei do Contato', icon: User, unlocked: true, description: 'Realize 50 ligações em uma semana.' },
-    { id: 3, name: 'Mestre da Proposta', icon: Award, unlocked: true, description: 'Envie 10 propostas com mais de 80% de aceite.' },
-    { id: 4, name: 'Vendedor de Elite', icon: Crown, unlocked: true, description: 'Alcance R$ 100.000 em vendas no mês.' },
-    { id: 5, name: 'Imbatível', icon: ShieldCheck, unlocked: false, description: 'Fique em 1º lugar no ranking por 3 meses seguidos.' },
-    { id: 6, name: 'Tubarão de Vendas', icon: Gem, unlocked: false, description: 'Feche um negócio acima de R$ 500.000.' },
-    { id: 7, name: 'Velocista', icon: Zap, unlocked: true, description: 'Feche 5 negócios em uma única semana.' },
-    { id: 8, name: 'Maratonista', icon: Trophy, unlocked: false, description: 'Complete 100% de todas as missões em um mês.' },
-  ]);
+  // Carrega dados do Firebase
+  useEffect(() => {
+    const loadGamificationData = async () => {
+      try {
+        // Carrega ranking do Firebase
+        const rankingSnapshot = await getDocs(collection(db, 'ranking'));
+        const rankingFirebase = rankingSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
 
-  const [missionsData, setMissionsData] = useState([
-    { id: 1, title: 'Missão Semanal: Follow-up', description: 'Realize 20 atividades de follow-up.', reward: 250, progress: 15, goal: 20 },
-    { id: 2, title: 'Desafio do Ticket Médio', description: 'Aumente seu ticket médio em 15%.', reward: 500, progress: 8, goal: 15 },
-    { id: 3, title: 'Conquista Rápida: Novo Lead', description: 'Qualifique 5 novos leads hoje.', reward: 100, progress: 4, goal: 5 },
-  ]);
-  
-  // NOVO: Mock data para os prêmios
-  const [rewardsData, setRewardsData] = useState([
+        if (rankingFirebase.length > 0) {
+          setLeaderboardData(rankingFirebase);
+        } else {
+          // Dados mock se não houver dados no Firebase
+          const mockLeaderboard = [
+            { rank: 1, name: 'Ana Costa', points: 7150, avatar: 'AC', isCurrentUser: false, trend: 'up' },
+            { rank: 2, name: 'Bruno Silva', points: 6890, avatar: 'BS', isCurrentUser: false, trend: 'up' },
+            { rank: 3, name: 'Carlos Mendes', points: 5520, avatar: 'CM', isCurrentUser: false, trend: 'down' },
+            { rank: 4, name: 'Você', points: 4280, avatar: 'VC', isCurrentUser: true, trend: 'up' },
+            { rank: 5, name: 'Daniela Lima', points: 3910, avatar: 'DL', isCurrentUser: false, trend: 'down' },
+            { rank: 6, name: 'Eduardo Reis', points: 3750, avatar: 'ER', isCurrentUser: false, trend: 'up' },
+            { rank: 7, name: 'Fernanda Dias', points: 3400, avatar: 'FD', isCurrentUser: false, trend: 'up' },
+          ];
+          setLeaderboardData(mockLeaderboard);
+          
+          // Salva dados mock no Firebase
+          mockLeaderboard.forEach(async (item) => {
+            try {
+              await addDoc(collection(db, 'ranking'), item);
+            } catch (error) {
+              console.log('Erro ao salvar ranking no Firebase:', error);
+            }
+          });
+        }
+      } catch (error) {
+        console.log('Erro ao carregar dados de gamificação:', error);
+        // Fallback para dados mock
+        setLeaderboardData([
+          { rank: 1, name: 'Ana Costa', points: 7150, avatar: 'AC', isCurrentUser: false, trend: 'up' },
+          { rank: 2, name: 'Bruno Silva', points: 6890, avatar: 'BS', isCurrentUser: false, trend: 'up' },
+          { rank: 3, name: 'Carlos Mendes', points: 5520, avatar: 'CM', isCurrentUser: false, trend: 'down' },
+          { rank: 4, name: 'Você', points: 4280, avatar: 'VC', isCurrentUser: true, trend: 'up' },
+          { rank: 5, name: 'Daniela Lima', points: 3910, avatar: 'DL', isCurrentUser: false, trend: 'down' },
+          { rank: 6, name: 'Eduardo Reis', points: 3750, avatar: 'ER', isCurrentUser: false, trend: 'up' },
+          { rank: 7, name: 'Fernanda Dias', points: 3400, avatar: 'FD', isCurrentUser: false, trend: 'up' },
+        ]);
+      }
+    };
+
+    loadGamificationData();
+  }, []);
+
+  // Inicializa dados mock para conquistas, missões e prêmios
+  useEffect(() => {
+    setAchievementsData([
+      { id: 1, name: 'Primeiro Negócio', icon: Star, unlocked: true, description: 'Feche seu primeiro negócio na plataforma.' },
+      { id: 2, name: 'Rei do Contato', icon: User, unlocked: true, description: 'Realize 50 ligações em uma semana.' },
+      { id: 3, name: 'Mestre da Proposta', icon: Award, unlocked: true, description: 'Envie 10 propostas com mais de 80% de aceite.' },
+      { id: 4, name: 'Vendedor de Elite', icon: Crown, unlocked: true, description: 'Alcance R$ 100.000 em vendas no mês.' },
+      { id: 5, name: 'Imbatível', icon: ShieldCheck, unlocked: false, description: 'Fique em 1º lugar no ranking por 3 meses seguidos.' },
+      { id: 6, name: 'Tubarão de Vendas', icon: Gem, unlocked: false, description: 'Feche um negócio acima de R$ 500.000.' },
+      { id: 7, name: 'Velocista', icon: Zap, unlocked: true, description: 'Feche 5 negócios em uma única semana.' },
+      { id: 8, name: 'Maratonista', icon: Trophy, unlocked: false, description: 'Complete 100% de todas as missões em um mês.' },
+    ]);
+
+    setMissionsData([
+      { id: 1, title: 'Missão Semanal: Follow-up', description: 'Realize 20 atividades de follow-up.', reward: 250, progress: 15, goal: 20 },
+      { id: 2, title: 'Desafio do Ticket Médio', description: 'Aumente seu ticket médio em 15%.', reward: 500, progress: 8, goal: 15 },
+      { id: 3, title: 'Conquista Rápida: Novo Lead', description: 'Qualifique 5 novos leads hoje.', reward: 100, progress: 4, goal: 5 },
+    ]);
+
+    setRewardsData([
       { id: 1, name: 'Vale-presente iFood R$50', cost: 2500, icon: Gift },
       { id: 2, name: 'Café da Tarde com a Diretoria', cost: 4000, icon: Coffee },
       { id: 3, name: 'Meio Dia de Folga', cost: 7500, icon: Plane },
       { id: 4, name: 'Headset Gamer Pro', cost: 10000, icon: Headphones },
-  ]);
+    ]);
+  }, []);
 
   const getRankColor = (rank) => {
     if (rank === 1) return 'gold';

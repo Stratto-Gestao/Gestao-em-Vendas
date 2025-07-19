@@ -1303,30 +1303,21 @@ const VendasPage = () => {
     const mesAtual = mesAnoSelecionado.mes;
     const anoAtual = mesAnoSelecionado.ano;
     
-    // Verificar se há dados importados para este mês
-    const historicoSalvo = JSON.parse(localStorage.getItem('historico-vendas-mensais-vendedor') || '[]');
-    const chaveAtual = `${mesAtual + 1}/${anoAtual}`;
-    const dadosImportados = historicoSalvo.find(h => h.mes === chaveAtual && h.importado);
-    
+    // Calcular estatísticas apenas com dados do Firebase
     const vendasMes = vendasData.filter(venda => {
       const dataVenda = new Date(venda.dataPedido);
       return dataVenda.getMonth() === mesAtual && dataVenda.getFullYear() === anoAtual;
     });
-    
     const faturamentosMes = faturamentosData.filter(faturamento => {
       const dataFaturamento = new Date(faturamento.dataFaturamento);
       return dataFaturamento.getMonth() === mesAtual && dataFaturamento.getFullYear() === anoAtual;
     });
-    
-    // Se há dados importados, usar eles; senão usar os dados calculados
-    const totalVendido = dadosImportados ? dadosImportados.valorVendas : vendasMes.reduce((sum, venda) => sum + parseFloat(venda.valorPedido || 0), 0);
-    const totalFaturado = dadosImportados ? dadosImportados.valorFaturado : faturamentosMes.reduce((sum, faturamento) => sum + parseFloat(faturamento.valorFaturado || 0), 0);
-    const comissaoMes = dadosImportados ? dadosImportados.comissao : totalFaturado * 0.02;
-    
+    const totalVendido = vendasMes.reduce((sum, venda) => sum + parseFloat(venda.valorPedido || 0), 0);
+    const totalFaturado = faturamentosMes.reduce((sum, faturamento) => sum + parseFloat(faturamento.valorFaturado || 0), 0);
+    const comissaoMes = totalFaturado * 0.02;
     const pedidosPendentes = vendasMes.filter(venda => 
       !faturamentosData.some(fat => fat.numeroPedido === venda.numeroPedido)
     ).length;
-    
     const pedidosAbertos = vendasData.filter(venda => 
       !faturamentosData.some(fat => fat.numeroPedido === venda.numeroPedido)
     );
@@ -1334,49 +1325,32 @@ const VendasPage = () => {
       const valor = parseFloat(venda.valorPedido);
       return sum + (isNaN(valor) ? 0 : valor);
     }, 0);
-    
     const pedidosAguardandoProducao = vendasData.filter(venda => {
       const faturamento = faturamentosData.find(fat => fat.numeroPedido === venda.numeroPedido);
       return !faturamento && venda.aguardandoProducao === true;
     }).length;
-    
     const hoje = new Date();
     const pedidosAtrasados = vendasData.filter(venda => {
       const faturamento = faturamentosData.find(fat => fat.numeroPedido === venda.numeroPedido);
       if (faturamento) return false;
-      
       const dataPedido = new Date(venda.dataPedido);
       const diasDiferenca = Math.floor((hoje - dataPedido) / (1000 * 60 * 60 * 24));
       return diasDiferenca >= 7;
     }).length;
-    
     const novasEstatisticas = {
       totalVendidoMes: totalVendido,
       totalFaturadoMes: totalFaturado,
       comissaoMes: comissaoMes,
-      totalPedidosMes: dadosImportados ? dadosImportados.quantidadeVendas : vendasMes.length,
-      pedidosPendentes: dadosImportados ? 0 : pedidosPendentes, // Dados importados não têm pendências
-      valorPedidosAbertos: dadosImportados ? 0 : valorPedidosAbertos,
-      pedidosAguardandoProducao: dadosImportados ? 0 : pedidosAguardandoProducao,
-      pedidosAtrasados: dadosImportados ? 0 : pedidosAtrasados,
-      ticketMedio: dadosImportados ? 
-        (dadosImportados.quantidadeVendas > 0 ? dadosImportados.valorVendas / dadosImportados.quantidadeVendas : 0) :
-        (vendasMes.length > 0 ? totalVendido / vendasMes.length : 0),
+      totalPedidosMes: vendasMes.length,
+      pedidosPendentes: pedidosPendentes,
+      valorPedidosAbertos: valorPedidosAbertos,
+      pedidosAguardandoProducao: pedidosAguardandoProducao,
+      pedidosAtrasados: pedidosAtrasados,
+      ticketMedio: vendasMes.length > 0 ? totalVendido / vendasMes.length : 0,
       percentualFaturamento: totalVendido > 0 ? (totalFaturado / totalVendido) * 100 : 0,
-      dadosImportados: !!dadosImportados
+      dadosImportados: false
     };
-    
     setEstatisticas(novasEstatisticas);
-    
-    const dadosParaPainel = {
-      valorVendas: totalVendido,
-      valorFaturado: totalFaturado,
-      comissao: comissaoMes,
-      vendas: vendasData,
-      faturamentos: faturamentosData
-    };
-    
-    localStorage.setItem('vendas-mensais-vendedor', JSON.stringify(dadosParaPainel));
   };
 
   const criarHistorico = (vendasData, faturamentosData) => {

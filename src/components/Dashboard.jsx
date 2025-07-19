@@ -30,7 +30,6 @@ import PainelPrincipal from '../pages/SDR/PainelPrincipal';
 import GestaoLeads from '../pages/SDR/GestaoLeads';
 import AssistenteIA from '../pages/SDR/AssistenteIA';
 import PassagemVendas from '../pages/SDR/PassagemVendas';
-import AnalisePerformance from '../pages/SDR/AnalisePerformance';
 import TarefasDiarias from '../pages/SDR/TarefasDiarias';
 // import BaseConhecimento from '../pages/SDR/BaseConhecimento';
 import PainelPrincipalVendedor from '../pages/Vendedor/PainelPrincipalVendedor';
@@ -78,7 +77,6 @@ const Dashboard = () => {
     // qualificacao: BadgeCheck,
     assistenteia: Bot,
     passagemvendas: ArrowRightLeft,
-    analiseperformance: AreaChart,
     tarefasdiarias: ClipboardList,
     // baseconhecimento: BookOpen,
     // Submenu Vendedor
@@ -98,7 +96,6 @@ const Dashboard = () => {
       'GestaoLeads', 
       'AssistenteIA', 
       'PassagemVendas', 
-      'AnalisePerformance', 
       'TarefasDiarias'
     ],
     vendedor: [
@@ -236,11 +233,11 @@ const Dashboard = () => {
       
       // Módulo SDR - redireciona para primeira sub-página
       case 'sdr':
-        return validatePageAccess(<PainelPrincipal />, 'sdr');
+        return validatePageAccess(<PainelPrincipal setActivePage={setActivePage} />, 'sdr');
       
       // Páginas SDR - todas requerem acesso ao módulo 'sdr'
       case 'PainelPrincipal':
-        return validatePageAccess(<PainelPrincipal />, 'sdr');
+        return validatePageAccess(<PainelPrincipal setActivePage={setActivePage} />, 'sdr');
       case 'GestaoLeads':
         return validatePageAccess(<GestaoLeads />, 'sdr');
       // case 'Qualificacao':
@@ -249,8 +246,6 @@ const Dashboard = () => {
         return validatePageAccess(<AssistenteIA />, 'sdr');
       case 'PassagemVendas':
         return validatePageAccess(<PassagemVendas />, 'sdr');
-      case 'AnalisePerformance':
-        return validatePageAccess(<AnalisePerformance />, 'sdr');
       case 'TarefasDiarias':
         return validatePageAccess(<TarefasDiarias />, 'sdr');
       
@@ -388,7 +383,6 @@ const Dashboard = () => {
                         'AssistenteIA': 'IA',
                         'AssistenteIAVendedor': 'IA',
                         'PassagemVendas': 'Passagem',
-                        'AnalisePerformance': 'Performance',
                         'TarefasDiarias': 'Tarefas',
                         'TarefasDiariasVendedor': 'Tarefas',
                         'Clientes': 'Clientes',

@@ -5,26 +5,7 @@ import { Send, Eye, CheckCircle, ArrowRight, Users, Target, Clock, Star, Trendin
 
 function PassagemVendas() {
   // Limpa todos os dados de teste do Firestore e localStorage ao carregar a página
-  useEffect(() => {
-    const limparDados = async () => {
-      // Limpa localStorage
-      localStorage.removeItem('negocios');
-      // Limpa Firestore: leads e negocios
-      try {
-        const leadsSnap = await getDocs(collection(db, 'leads'));
-        for (const d of leadsSnap.docs) {
-          await deleteDoc(doc(db, 'leads', d.id));
-        }
-        const negociosSnap = await getDocs(collection(db, 'negocios'));
-        for (const d of negociosSnap.docs) {
-          await deleteDoc(doc(db, 'negocios', d.id));
-        }
-      } catch (e) {
-        // Ignora erros de permissão
-      }
-    };
-    limparDados();
-  }, []);
+  // Removido: limpeza de localStorage e Firestore ao carregar a página
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
@@ -65,7 +46,6 @@ function PassagemVendas() {
     try {
       // Cria negócio para o vendedor (coleção 'negocios' ou similar)
       const novoNegocio = {
-        id: Date.now(),
         titulo: `Negócio de ${lead.nome}`,
         cliente: lead.nome,
         empresa: lead.empresa,
@@ -93,14 +73,10 @@ function PassagemVendas() {
         atividades: 0,
         propostas: 0
       };
-      await addDoc(collection(db, 'negocios'), novoNegocio);
-      // Salva também no localStorage para aparecer no Kanban imediatamente
-      let negociosLS = [];
-      try {
-        negociosLS = JSON.parse(localStorage.getItem('negocios')) || [];
-      } catch (e) {}
-      negociosLS.push(novoNegocio);
-      localStorage.setItem('negocios', JSON.stringify(negociosLS));
+      // Adiciona o negócio e obtém o ID gerado pelo Firestore
+      const docRef = await addDoc(collection(db, 'negocios'), novoNegocio);
+      // Atualiza o documento para incluir o campo id igual ao do Firestore (opcional, mas útil para o frontend)
+      await updateDoc(docRef, { id: docRef.id });
       // Atualiza status do lead para 'Transferido'
       await updateDoc(doc(db, 'leads', lead.id), { status: 'Transferido' });
       setLeads(leads.filter(l => l.id !== lead.id));
