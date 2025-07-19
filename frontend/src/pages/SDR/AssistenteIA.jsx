@@ -1,613 +1,564 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { 
-  Lightbulb, MessageSquare, ChevronDown, Send, Eye, Download,
-  CheckCircle, Mail, AlertCircle, Bot, Phone, Target
-} from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
 
 function AssistenteIA() {
-  const [selectedFunnel, setSelectedFunnel] = useState('Primeiro Contato');
-  const [selectedSegment, setSelectedSegment] = useState('Tecnologia');
-  const [chatMessage, setChatMessage] = useState('');
-  const [chatMessages, setChatMessages] = useState([]);
+  const [messages, setMessages] = useState([
+    {
+      id: 1,
+      text: "Olá! Sou seu assistente de vendas com I.A. Como posso ajudar você hoje? Posso auxiliar com qualificação de leads, criação de propostas ou análise de pipeline.",
+      sender: 'ai'
+    }
+  ]);
+  const [inputMessage, setInputMessage] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const messagesEndRef = useRef(null);
 
-  const topCards = [];
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
-  const suggestions = [];
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
-  const funnelOptions = ['Primeiro Contato', 'Qualificação', 'Proposta', 'Fechamento'];
-  const segmentOptions = ['Tecnologia', 'Saúde', 'Educação', 'Financeiro'];
-
-  const handleSendMessage = () => {
-    if (chatMessage.trim()) {
-      setChatMessages([...chatMessages, { type: 'user', text: chatMessage }]);
-      setChatMessage('');
+  const sendMessage = () => {
+    if (inputMessage.trim()) {
+      const newMessage = {
+        id: Date.now(),
+        text: inputMessage,
+        sender: 'user'
+      };
+      
+      setMessages(prev => [...prev, newMessage]);
+      setInputMessage('');
+      setIsTyping(true);
       
       // Simular resposta da IA
       setTimeout(() => {
-        setChatMessages(prev => [...prev, {
-          type: 'ai',
-          text: 'Preciso de sugestões para qualificar a TechStart'
-        }]);
-      }, 1000);
+        const aiResponses = [
+          "Entendi! Vou analisar isso para você. Com base nos dados históricos, recomendo focar nos leads que mostraram engajamento nos últimos 3 dias.",
+          "Excelente pergunta! Posso criar um relatório detalhado sobre isso. Que período você gostaria de analisar?",
+          "Baseado no seu histórico, identifiquei 3 oportunidades de alto valor. Gostaria que eu crie um plano de ação?",
+          "Perfeito! Vou preparar uma análise preditiva personalizada. Isso pode levar alguns minutos para processar todos os dados.",
+          "Ótima estratégia! Com base nas suas métricas atuais, essa abordagem pode aumentar sua conversão em até 25%."
+        ];
+        
+        const randomResponse = aiResponses[Math.floor(Math.random() * aiResponses.length)];
+        const aiMessage = {
+          id: Date.now() + 1,
+          text: randomResponse,
+          sender: 'ai'
+        };
+        
+        setMessages(prev => [...prev, aiMessage]);
+        setIsTyping(false);
+      }, 1500);
     }
   };
 
-  return (
-    <div className="ai-assistant-container">
-      {/* Cards Superiores */}
-      <div className="top-cards-grid">
-        {topCards.map((card, index) => (
-          <div key={index} className="top-card">
-            <div className="card-header">
-              <div className={`card-icon ${card.iconBg}`}>
-                <card.icon className={`${card.iconColor}`} size={24} />
-              </div>
-            </div>
-            <div className="card-content">
-              <h3 className="card-title">{card.title}</h3>
-              <p className="card-subtitle">{card.subtitle}</p>
-            </div>
-            <button className={`card-button ${card.buttonColor}`}>
-              {card.buttonText}
-            </button>
-          </div>
-        ))}
-      </div>
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      sendMessage();
+    }
+  };
 
-      {/* Layout Principal em 2 Colunas */}
-      <div className="main-layout">
-        {/* Coluna Esquerda - Sugestões */}
-        <div className="left-column">
-          <div className="suggestions-section">
-            <h2 className="section-title">Sugestões da IA</h2>
-            <div className="suggestions-list">
-              {suggestions.map((suggestion, index) => (
-                <div key={index} className="suggestion-item">
-                  <div className="suggestion-header">
-                    <div className="suggestion-icon">
-                      <suggestion.icon className={suggestion.iconColor} size={20} />
-                    </div>
-                    <div className="suggestion-content">
-                      <h4 className="suggestion-title">{suggestion.title}</h4>
-                      <p className="suggestion-subtitle">{suggestion.subtitle}</p>
-                    </div>
-                  </div>
-                  <div className="suggestion-actions">
-                    {suggestion.actions.map((action, actionIndex) => (
-                      <button key={actionIndex} className="action-button">
-                        {action === 'Ver' ? <Eye size={16} /> : <Download size={16} />}
-                        {action}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
+  const startLeadGeneration = () => {
+    alert('Iniciando geração de leads inteligente...');
+  };
+
+  const openEmailComposer = () => {
+    alert('Abrindo composer de email com I.A...');
+  };
+
+  const analyzeDeals = () => {
+    alert('Analisando pipeline de vendas...');
+  };
+
+  const openCallAssistant = () => {
+    alert('Iniciando assistente de chamadas...');
+  };
+
+  const toggleQuickMenu = () => {
+    alert('Menu rápido - Em desenvolvimento');
+  };
+
+  return (
+    <div className="assistente-ia-container">
+      {/* Header */}
+      <header className="header glass">
+        <div className="header-content">
+          <div className="logo">
+            🤖 Assistente I.A Vendas
+          </div>
+          <div className="user-info">
+            <span>Bem-vindo, João Silva</span>
+            <div className="user-avatar">JS</div>
           </div>
         </div>
+      </header>
 
-        {/* Coluna Direita */}
-        <div className="right-column">
-          {/* Gerador de Scripts WhatsApp */}
-          <div className="whatsapp-generator">
-            <h3 className="generator-title">Gerador de Scripts WhatsApp</h3>
-            
-            <div className="generator-form">
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">Etapa do Funil</label>
-                  <div className="custom-select">
-                    <select 
-                      value={selectedFunnel} 
-                      onChange={(e) => setSelectedFunnel(e.target.value)}
-                      className="select-input"
-                    >
-                      {funnelOptions.map(option => (
-                        <option key={option} value={option}>{option}</option>
-                      ))}
-                    </select>
-                    <ChevronDown className="select-arrow" size={16} />
-                  </div>
-                </div>
-                
-                <div className="form-group">
-                  <label className="form-label">Segmento do Lead</label>
-                  <div className="custom-select">
-                    <select 
-                      value={selectedSegment} 
-                      onChange={(e) => setSelectedSegment(e.target.value)}
-                      className="select-input"
-                    >
-                      {segmentOptions.map(option => (
-                        <option key={option} value={option}>{option}</option>
-                      ))}
-                    </select>
-                    <ChevronDown className="select-arrow" size={16} />
-                  </div>
-                </div>
-              </div>
-              
-              <button className="generate-button">
-                <MessageSquare size={18} />
-                Gerar Script WhatsApp
-              </button>
-            </div>
+      <div className="container">
+        {/* Hero Section */}
+        <section className="hero">
+          <h1>Acelere suas Vendas com I.A</h1>
+          <p>Potencialize sua equipe de vendas com inteligência artificial avançada. Geração de leads, automação de follow-ups e insights preditivos em uma única plataforma.</p>
+        </section>
+
+        {/* Quick Actions */}
+        <section className="quick-actions">
+          <div className="action-card glass" onClick={startLeadGeneration}>
+            <span className="action-icon">🎯</span>
+            <div className="action-title">Geração de Leads</div>
+            <div className="action-desc">Encontre prospects qualificados automaticamente</div>
           </div>
+          <div className="action-card glass" onClick={openEmailComposer}>
+            <span className="action-icon">✉️</span>
+            <div className="action-title">Email Inteligente</div>
+            <div className="action-desc">Crie emails personalizados com I.A</div>
+          </div>
+          <div className="action-card glass" onClick={analyzeDeals}>
+            <span className="action-icon">📊</span>
+            <div className="action-title">Análise de Deals</div>
+            <div className="action-desc">Insights preditivos para fechamento</div>
+          </div>
+          <div className="action-card glass" onClick={openCallAssistant}>
+            <span className="action-icon">📞</span>
+            <div className="action-title">Assistente de Chamadas</div>
+            <div className="action-desc">Coaching em tempo real durante calls</div>
+          </div>
+        </section>
 
-          {/* Chat com IA */}
-          <div className="chat-section">
-            <h3 className="chat-title">Chat com IA</h3>
+        {/* Main Grid */}
+        <div className="main-grid">
+          {/* Chat Interface */}
+          <section className="chat-section glass-strong">
+            <div className="chat-header">
+              <h3>Chat com I.A</h3>
+              <div className="chat-status">
+                <span className="status-dot"></span>
+                Online
+              </div>
+            </div>
             
             <div className="chat-messages">
-              {chatMessages.map((message, index) => (
-                <div key={index} className={`message ${message.type}`}>
-                  <div className="message-bubble">
-                    {message.text}
-                  </div>
+              {messages.map((message) => (
+                <div key={message.id} className={`message ${message.sender}`}>
+                  {message.text}
                 </div>
               ))}
+              {isTyping && (
+                <div className="message ai">
+                  <div className="loading"></div>
+                  Digitando...
+                </div>
+              )}
+              <div ref={messagesEndRef} />
             </div>
             
-            <div className="chat-input-container">
-              <input
-                type="text"
-                placeholder="Digite sua pergunta..."
-                value={chatMessage}
-                onChange={(e) => setChatMessage(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                className="chat-input"
+            <div className="chat-input">
+              <input 
+                type="text" 
+                className="input-field" 
+                placeholder="Digite sua mensagem..." 
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
               />
-              <button onClick={handleSendMessage} className="send-button">
-                <Send size={18} />
-              </button>
+              <button className="send-btn" onClick={sendMessage}>📩</button>
+            </div>
+          </section>
+
+          {/* Analytics Panel */}
+          <section className="analytics-panel glass-strong">
+            <div className="analytics-header">
+              <h3>Dashboard de Performance</h3>
+              <p>Métricas em tempo real da sua equipe</p>
+            </div>
+            
+            <div className="metric-cards">
+              <div className="metric-card">
+                <div className="metric-value">247</div>
+                <div className="metric-label">Leads Gerados (mês)</div>
+                <div className="metric-trend trend-up">↗ +23% vs mês anterior</div>
+              </div>
+              <div className="metric-card">
+                <div className="metric-value">18%</div>
+                <div className="metric-label">Taxa de Conversão</div>
+                <div className="metric-trend trend-up">↗ +5.2% vs mês anterior</div>
+              </div>
+              <div className="metric-card">
+                <div className="metric-value">R$ 89k</div>
+                <div className="metric-label">Receita Gerada</div>
+                <div className="metric-trend trend-up">↗ +12% vs mês anterior</div>
+              </div>
+              <div className="metric-card">
+                <div className="metric-value">4.2</div>
+                <div className="metric-label">Score de Qualidade</div>
+                <div className="metric-trend trend-up">↗ +0.3 vs mês anterior</div>
+              </div>
+            </div>
+            
+            <div className="glass pipeline-widget">
+              <h4>Pipeline Inteligente</h4>
+              <div className="pipeline-item">
+                <span>Prospects</span>
+                <span>34</span>
+              </div>
+              <div className="pipeline-item">
+                <span>Qualificados</span>
+                <span>12</span>
+              </div>
+              <div className="pipeline-item">
+                <span>Proposta</span>
+                <span>8</span>
+              </div>
+              <div className="pipeline-item">
+                <span>Fechamento</span>
+                <span>3</span>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        {/* Tools Section */}
+        <section className="tools-section">
+          <div className="section-header">
+            <h2>Ferramentas Avançadas de I.A</h2>
+            <p>Soluções completas para maximizar sua performance em vendas</p>
+          </div>
+          
+          <div className="tools-grid">
+            <div className="tool-card glass">
+              <div className="tool-header">
+                <span className="tool-icon">🔍</span>
+                <div className="tool-title">Lead Scoring Inteligente</div>
+              </div>
+              <div className="tool-description">
+                Algoritmo avançado que analisa comportamento, perfil e histórico para pontuar e priorizar leads automaticamente.
+              </div>
+              <ul className="tool-features">
+                <li>Análise comportamental em tempo real</li>
+                <li>Scoring preditivo baseado em ML</li>
+                <li>Integração com CRM existente</li>
+                <li>Alertas de alta prioridade</li>
+              </ul>
+            </div>
+
+            <div className="tool-card glass">
+              <div className="tool-header">
+                <span className="tool-icon">🎨</span>
+                <div className="tool-title">Gerador de Propostas</div>
+              </div>
+              <div className="tool-description">
+                Crie propostas comerciais personalizadas e persuasivas usando templates inteligentes e dados do cliente.
+              </div>
+              <ul className="tool-features">
+                <li>Templates adaptativos por segmento</li>
+                <li>Personalização automática</li>
+                <li>Análise de precificação</li>
+                <li>Assinatura digital integrada</li>
+              </ul>
+            </div>
+
+            <div className="tool-card glass">
+              <div className="tool-header">
+                <span className="tool-icon">📈</span>
+                <div className="tool-title">Previsão de Vendas</div>
+              </div>
+              <div className="tool-description">
+                Machine learning avançado para prever resultados de vendas e identificar oportunidades de crescimento.
+              </div>
+              <ul className="tool-features">
+                <li>Previsões precisas por território</li>
+                <li>Identificação de tendências</li>
+                <li>Alertas de risco em deals</li>
+                <li>Relatórios executivos automáticos</li>
+              </ul>
+            </div>
+
+            <div className="tool-card glass">
+              <div className="tool-header">
+                <span className="tool-icon">🤖</span>
+                <div className="tool-title">Chatbot Qualificador</div>
+              </div>
+              <div className="tool-description">
+                Bot inteligente que qualifica leads 24/7, agenda reuniões e nutri prospects até estarem prontos para vendas.
+              </div>
+              <ul className="tool-features">
+                <li>Qualificação automática BANT</li>
+                <li>Agendamento inteligente</li>
+                <li>Nutrição personalizada</li>
+                <li>Handoff perfeito para SDRs</li>
+              </ul>
+            </div>
+
+            <div className="tool-card glass">
+              <div className="tool-header">
+                <span className="tool-icon">📞</span>
+                <div className="tool-title">Call Intelligence</div>
+              </div>
+              <div className="tool-description">
+                Análise em tempo real de chamadas com insights sobre sentimento, objeções e momentos-chave para fechamento.
+              </div>
+              <ul className="tool-features">
+                <li>Transcrição em tempo real</li>
+                <li>Análise de sentimento</li>
+                <li>Detecção de objeções</li>
+                <li>Coaching automático</li>
+              </ul>
+            </div>
+
+            <div className="tool-card glass">
+              <div className="tool-header">
+                <span className="tool-icon">🎯</span>
+                <div className="tool-title">Sequências de Follow-up</div>
+              </div>
+              <div className="tool-description">
+                Automação inteligente de follow-ups personalizados baseados no comportamento e estágio do prospect no funil.
+              </div>
+              <ul className="tool-features">
+                <li>Sequências adaptativas</li>
+                <li>A/B testing automático</li>
+                <li>Timing otimizado por I.A</li>
+                <li>Multi-canal (email, SMS, LinkedIn)</li>
+              </ul>
             </div>
           </div>
-        </div>
+        </section>
       </div>
 
-      <style>{`
-        .ai-assistant-container {
-          padding: 2rem;
-          background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+      {/* Floating Action Button */}
+      <button className="fab" onClick={toggleQuickMenu}>⚡</button>
+
+      <style jsx>{`
+        .assistente-ia-container {
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
           min-height: 100vh;
-          animation: fadeIn 0.6s ease-out;
+          color: #fff;
+          overflow-x: hidden;
+          position: relative;
         }
 
-        .ai-assistant-container::before {
+        .assistente-ia-container::before {
+          content: '';
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: radial-gradient(circle at 25% 25%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+                      radial-gradient(circle at 75% 75%, rgba(255, 118, 117, 0.3) 0%, transparent 50%),
+                      radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.2) 0%, transparent 50%);
+          animation: gradientShift 15s ease-in-out infinite;
+          z-index: -1;
+        }
+
+        @keyframes gradientShift {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.8; }
+        }
+
+        .glass {
+          background: rgba(255, 255, 255, 0.1);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .glass-strong {
+          background: rgba(255, 255, 255, 0.15);
+          backdrop-filter: blur(25px);
+          -webkit-backdrop-filter: blur(25px);
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .header {
+          padding: 1.5rem 2rem;
+          border-radius: 0 0 24px 24px;
+          margin-bottom: 2rem;
+          position: sticky;
+          top: 0;
+          z-index: 100;
+        }
+
+        .header-content {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          max-width: 1400px;
+          margin: 0 auto;
+        }
+
+        .logo {
+          font-size: 1.8rem;
+          font-weight: 700;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+
+        .user-info {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+        }
+
+        .user-avatar {
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #667eea, #764ba2);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 600;
+        }
+
+        .container {
+          max-width: 1400px;
+          margin: 0 auto;
+          padding: 0 2rem;
+        }
+
+        .hero {
+          text-align: center;
+          margin-bottom: 3rem;
+        }
+
+        .hero h1 {
+          font-size: 3rem;
+          font-weight: 800;
+          margin-bottom: 1rem;
+          background: linear-gradient(135deg, #fff, #f8fafc);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+
+        .hero p {
+          font-size: 1.2rem;
+          opacity: 0.9;
+          max-width: 600px;
+          margin: 0 auto;
+        }
+
+        .quick-actions {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: 1.5rem;
+          margin-bottom: 3rem;
+        }
+
+        .action-card {
+          padding: 2rem;
+          border-radius: 20px;
+          text-align: center;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .action-card::before {
           content: '';
           position: absolute;
           top: 0;
           left: 0;
-          right: 0;
-          bottom: 0;
-          background: 
-            radial-gradient(circle at 20% 50%, rgba(59, 130, 246, 0.02), transparent 50%),
-            radial-gradient(circle at 80% 20%, rgba(139, 92, 246, 0.02), transparent 50%);
-          pointer-events: none;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+          opacity: 0;
+          transition: opacity 0.3s ease;
         }
 
-        /* Cards Superiores */
-        .top-cards-grid {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 1.5rem;
-          margin-bottom: 2rem;
-          position: relative;
-          z-index: 1;
+        .action-card:hover {
+          transform: translateY(-8px);
+          box-shadow: 0 16px 48px rgba(0, 0, 0, 0.2);
         }
 
-        .top-card {
-          background: white;
-          border: 2px solid #e2e8f0;
-          border-radius: 12px;
-          padding: 1.5rem;
-          transition: all 0.3s ease;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-          text-align: center;
+        .action-card:hover::before {
+          opacity: 1;
         }
 
-        .top-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-          border-color: #cbd5e1;
-        }
-
-        .card-header {
+        .action-icon {
+          font-size: 3rem;
           margin-bottom: 1rem;
+          display: block;
         }
 
-        .card-icon {
-          width: 3rem;
-          height: 3rem;
-          border-radius: 12px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          margin: 0 auto;
-          transition: transform 0.3s ease;
-        }
-
-        .top-card:hover .card-icon {
-          transform: scale(1.1);
-        }
-
-        .card-content {
-          margin-bottom: 1.5rem;
-        }
-
-        .card-title {
-          font-size: 1.1rem;
-          font-weight: 700;
-          color: #1e293b;
+        .action-title {
+          font-size: 1.2rem;
+          font-weight: 600;
           margin-bottom: 0.5rem;
         }
 
-        .card-subtitle {
-          font-size: 0.875rem;
-          color: #64748b;
-          line-height: 1.4;
+        .action-desc {
+          opacity: 0.8;
+          font-size: 0.95rem;
         }
 
-        /* Cores específicas para os botões */
-        .bg-yellow-500 {
-          background-color: #eab308;
-        }
-        
-        .bg-yellow-500:hover,
-        .hover\\:bg-yellow-600:hover {
-          background-color: #ca8a04;
-        }
-        
-        .bg-blue-500 {
-          background-color: #3b82f6;
-        }
-        
-        .bg-blue-500:hover,
-        .hover\\:bg-blue-600:hover {
-          background-color: #2563eb;
-        }
-        
-        .bg-purple-500 {
-          background-color: #8b5cf6;
-        }
-        
-        .bg-purple-500:hover,
-        .hover\\:bg-purple-600:hover {
-          background-color: #7c3aed;
-        }
-        
-        .bg-green-500 {
-          background-color: #22c55e;
-        }
-        
-        .bg-green-500:hover,
-        .hover\\:bg-green-600:hover {
-          background-color: #16a34a;
-        }
-        
-        .bg-indigo-500 {
-          background-color: #6366f1;
-        }
-        
-        .bg-indigo-500:hover,
-        .hover\\:bg-indigo-600:hover {
-          background-color: #4f46e5;
-        }
-        
-        .bg-emerald-500 {
-          background-color: #10b981;
-        }
-        
-        .bg-emerald-500:hover,
-        .hover\\:bg-emerald-600:hover {
-          background-color: #059669;
-        }
-
-        .text-white {
-          color: white;
-        }
-
-        /* Cores específicas para os ícones */
-        .text-yellow-500 {
-          color: #eab308;
-        }
-
-        .text-blue-500 {
-          color: #3b82f6;
-        }
-
-        .text-purple-500 {
-          color: #8b5cf6;
-        }
-
-        .text-green-600 {
-          color: #16a34a;
-        }
-
-        .text-indigo-600 {
-          color: #4f46e5;
-        }
-
-        .text-emerald-600 {
-          color: #059669;
-        }
-
-        /* Backgrounds dos ícones */
-        .bg-yellow-50 {
-          background-color: #fefce8;
-        }
-
-        .bg-blue-50 {
-          background-color: #eff6ff;
-        }
-
-        .bg-purple-50 {
-          background-color: #faf5ff;
-        }
-
-        .bg-green-50 {
-          background-color: #f0fdf4;
-        }
-
-        .bg-indigo-50 {
-          background-color: #eef2ff;
-        }
-
-        .bg-emerald-50 {
-          background-color: #ecfdf5;
-        }
-
-        .card-button {
-          width: 100%;
-          padding: 0.75rem 1rem;
-          border: none;
-          border-radius: 8px;
-          font-weight: 600;
-          font-size: 0.875rem;
-          cursor: pointer;
-          transition: all 0.3s ease;
-        }
-
-        .card-button:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        }
-
-        /* Layout Principal */
-        .main-layout {
+        .main-grid {
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 2rem;
-          position: relative;
-          z-index: 1;
+          margin-bottom: 3rem;
         }
 
-        /* Coluna Esquerda */
-        .left-column {
-          display: flex;
-          flex-direction: column;
-        }
-
-        .suggestions-section {
-          background: white;
-          border: 2px solid #e2e8f0;
-          border-radius: 12px;
-          padding: 1.5rem;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-          height: fit-content;
-        }
-
-        .section-title {
-          font-size: 1.25rem;
-          font-weight: 700;
-          color: #1e293b;
-          margin-bottom: 1.5rem;
-        }
-
-        .suggestions-list {
-          display: flex;
-          flex-direction: column;
-          gap: 1rem;
-        }
-
-        .suggestion-item {
-          padding: 1rem;
-          background: #f8fafc;
-          border: 1px solid #e2e8f0;
-          border-radius: 8px;
-          transition: all 0.3s ease;
-        }
-
-        .suggestion-item:hover {
-          background: #f1f5f9;
-          transform: translateX(2px);
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-          border-color: #cbd5e1;
-        }
-
-        .suggestion-header {
-          display: flex;
-          gap: 0.75rem;
-          margin-bottom: 0.75rem;
-        }
-
-        .suggestion-icon {
-          flex-shrink: 0;
-          margin-top: 0.125rem;
-        }
-
-        .suggestion-content {
-          flex: 1;
-        }
-
-        .suggestion-title {
-          font-size: 0.9rem;
-          font-weight: 600;
-          color: #1e293b;
-          margin-bottom: 0.25rem;
-        }
-
-        .suggestion-subtitle {
-          font-size: 0.8rem;
-          color: #64748b;
-          line-height: 1.4;
-        }
-
-        .suggestion-actions {
-          display: flex;
-          gap: 0.5rem;
-        }
-
-        .action-button {
-          display: flex;
-          align-items: center;
-          gap: 0.25rem;
-          padding: 0.25rem 0.5rem;
-          background: #3b82f6;
-          border: 1px solid #2563eb;
-          border-radius: 6px;
-          font-size: 0.75rem;
-          color: white;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-
-        .action-button:hover {
-          background: #2563eb;
-          transform: translateY(-1px);
-          box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
-        }
-
-        /* Coluna Direita */
-        .right-column {
-          display: flex;
-          flex-direction: column;
-          gap: 1.5rem;
-        }
-
-        .whatsapp-generator {
-          background: rgba(255, 255, 255, 0.9);
-          backdrop-filter: blur(20px);
-          border: 1px solid rgba(255, 255, 255, 0.3);
-          border-radius: 16px;
-          padding: 1.5rem;
-          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-        }
-
-        .generator-title {
-          font-size: 1.125rem;
-          font-weight: 700;
-          color: #1e293b;
-          margin-bottom: 1rem;
-        }
-
-        .generator-form {
-          display: flex;
-          flex-direction: column;
-          gap: 1rem;
-        }
-
-        .form-row {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 1rem;
-        }
-
-        .form-group {
-          display: flex;
-          flex-direction: column;
-        }
-
-        .form-label {
-          font-size: 0.875rem;
-          font-weight: 600;
-          color: #374151;
-          margin-bottom: 0.5rem;
-        }
-
-        .custom-select {
-          position: relative;
-        }
-
-        .select-input {
-          width: 100%;
-          padding: 0.75rem 2rem 0.75rem 0.75rem;
-          background: white;
-          border: 1px solid #d1d5db;
-          border-radius: 8px;
-          font-size: 0.875rem;
-          color: #1e293b;
-          appearance: none;
-          cursor: pointer;
-          transition: all 0.3s ease;
-        }
-
-        .select-input:focus {
-          outline: none;
-          border-color: #3b82f6;
-          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-
-        .select-arrow {
-          position: absolute;
-          right: 0.75rem;
-          top: 50%;
-          transform: translateY(-50%);
-          color: #6b7280;
-          pointer-events: none;
-        }
-
-        .generate-button {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 0.5rem;
-          padding: 0.875rem 1.5rem;
-          background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-          border: none;
-          border-radius: 8px;
-          color: white;
-          font-weight: 600;
-          font-size: 0.875rem;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
-        }
-
-        .generate-button:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
-        }
-
-        /* Chat Section */
         .chat-section {
-          background: rgba(255, 255, 255, 0.9);
-          backdrop-filter: blur(20px);
-          border: 1px solid rgba(255, 255, 255, 0.3);
-          border-radius: 16px;
-          padding: 1.5rem;
-          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-          flex: 1;
+          border-radius: 24px;
+          padding: 2rem;
+          height: 600px;
+          display: flex;
+          flex-direction: column;
         }
 
-        .chat-title {
-          font-size: 1.125rem;
-          font-weight: 700;
-          color: #1e293b;
-          margin-bottom: 1rem;
+        .chat-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 1.5rem;
+          padding-bottom: 1rem;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .chat-header h3 {
+          font-size: 1.4rem;
+          font-weight: 600;
+        }
+
+        .chat-status {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          font-size: 0.9rem;
+          opacity: 0.8;
+        }
+
+        .status-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          background: #10b981;
+          animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.5; }
         }
 
         .chat-messages {
-          height: 200px;
+          flex: 1;
           overflow-y: auto;
           margin-bottom: 1rem;
-          padding: 0.5rem;
-          border-radius: 8px;
-          background: rgba(248, 250, 252, 0.5);
+          scrollbar-width: thin;
+          scrollbar-color: rgba(255,255,255,0.3) transparent;
         }
 
         .chat-messages::-webkit-scrollbar {
-          width: 4px;
+          width: 6px;
         }
 
         .chat-messages::-webkit-scrollbar-track {
@@ -615,121 +566,19 @@ function AssistenteIA() {
         }
 
         .chat-messages::-webkit-scrollbar-thumb {
-          background: rgba(148, 163, 184, 0.5);
-          border-radius: 2px;
+          background: rgba(255,255,255,0.3);
+          border-radius: 3px;
         }
 
         .message {
-          margin-bottom: 0.75rem;
-          display: flex;
-        }
-
-        .message.user {
-          justify-content: flex-end;
-        }
-
-        .message.ai {
-          justify-content: flex-start;
-        }
-
-        .message-bubble {
+          margin-bottom: 1rem;
+          padding: 1rem;
+          border-radius: 16px;
           max-width: 80%;
-          padding: 0.75rem 1rem;
-          border-radius: 12px;
-          font-size: 0.875rem;
-          line-height: 1.4;
+          animation: fadeInUp 0.3s ease;
         }
 
-        .message.user .message-bubble {
-          background: #3b82f6;
-          color: white;
-          border-bottom-right-radius: 4px;
-        }
-
-        .message.ai .message-bubble {
-          background: white;
-          color: #1e293b;
-          border: 1px solid #e2e8f0;
-          border-bottom-left-radius: 4px;
-        }
-
-        .chat-input-container {
-          display: flex;
-          gap: 0.5rem;
-        }
-
-        .chat-input {
-          flex: 1;
-          padding: 0.75rem 1rem;
-          background: white;
-          border: 1px solid #d1d5db;
-          border-radius: 8px;
-          font-size: 0.875rem;
-          color: #1e293b;
-          transition: all 0.3s ease;
-        }
-
-        .chat-input:focus {
-          outline: none;
-          border-color: #3b82f6;
-          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-
-        .chat-input::placeholder {
-          color: #9ca3af;
-        }
-
-        .send-button {
-          padding: 0.75rem;
-          background: linear-gradient(135deg, #3b82f6, #2563eb);
-          border: none;
-          border-radius: 8px;
-          color: white;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .send-button:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-        }
-
-        /* Responsive */
-        @media (max-width: 1200px) {
-          .top-cards-grid {
-            grid-template-columns: repeat(2, 1fr);
-          }
-        }
-
-        @media (max-width: 1024px) {
-          .main-layout {
-            grid-template-columns: 1fr;
-          }
-          
-          .form-row {
-            grid-template-columns: 1fr;
-          }
-        }
-
-        @media (max-width: 768px) {
-          .ai-assistant-container {
-            padding: 1rem;
-          }
-          
-          .top-cards-grid {
-            grid-template-columns: 1fr;
-            gap: 1rem;
-          }
-          
-          .main-layout {
-            gap: 1rem;
-          }
-        }
-
-        @keyframes fadeIn {
+        @keyframes fadeInUp {
           from {
             opacity: 0;
             transform: translateY(20px);
@@ -737,6 +586,295 @@ function AssistenteIA() {
           to {
             opacity: 1;
             transform: translateY(0);
+          }
+        }
+
+        .message.ai {
+          background: rgba(59, 130, 246, 0.2);
+          border: 1px solid rgba(59, 130, 246, 0.3);
+          margin-right: auto;
+        }
+
+        .message.user {
+          background: rgba(16, 185, 129, 0.2);
+          border: 1px solid rgba(16, 185, 129, 0.3);
+          margin-left: auto;
+        }
+
+        .chat-input {
+          display: flex;
+          gap: 1rem;
+          align-items: center;
+        }
+
+        .input-field {
+          flex: 1;
+          padding: 1rem;
+          border: none;
+          border-radius: 16px;
+          background: rgba(255, 255, 255, 0.1);
+          backdrop-filter: blur(10px);
+          color: #fff;
+          font-size: 1rem;
+          outline: none;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .input-field::placeholder {
+          color: rgba(255, 255, 255, 0.6);
+        }
+
+        .send-btn {
+          padding: 1rem;
+          border: none;
+          border-radius: 16px;
+          background: linear-gradient(135deg, #667eea, #764ba2);
+          color: #fff;
+          cursor: pointer;
+          font-size: 1.2rem;
+          transition: all 0.3s ease;
+        }
+
+        .send-btn:hover {
+          transform: scale(1.05);
+          box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+        }
+
+        .analytics-panel {
+          border-radius: 24px;
+          padding: 2rem;
+        }
+
+        .analytics-header {
+          margin-bottom: 2rem;
+        }
+
+        .analytics-header h3 {
+          font-size: 1.4rem;
+          font-weight: 600;
+          margin-bottom: 0.5rem;
+        }
+
+        .metric-cards {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 1rem;
+          margin-bottom: 2rem;
+        }
+
+        .metric-card {
+          padding: 1.5rem;
+          border-radius: 16px;
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          text-align: center;
+          transition: all 0.3s ease;
+        }
+
+        .metric-card:hover {
+          transform: translateY(-4px);
+          background: rgba(255, 255, 255, 0.12);
+        }
+
+        .metric-value {
+          font-size: 2rem;
+          font-weight: 700;
+          margin-bottom: 0.5rem;
+        }
+
+        .metric-label {
+          font-size: 0.9rem;
+          opacity: 0.8;
+        }
+
+        .metric-trend {
+          font-size: 0.8rem;
+          margin-top: 0.5rem;
+        }
+
+        .trend-up {
+          color: #10b981;
+        }
+
+        .trend-down {
+          color: #ef4444;
+        }
+
+        .pipeline-widget {
+          padding: 1.5rem;
+          border-radius: 16px;
+          text-align: center;
+        }
+
+        .pipeline-widget h4 {
+          margin-bottom: 1rem;
+        }
+
+        .pipeline-item {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 0.5rem;
+        }
+
+        .tools-section {
+          margin-bottom: 3rem;
+        }
+
+        .section-header {
+          text-align: center;
+          margin-bottom: 2rem;
+        }
+
+        .section-header h2 {
+          font-size: 2.2rem;
+          font-weight: 700;
+          margin-bottom: 0.5rem;
+        }
+
+        .tools-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+          gap: 1.5rem;
+        }
+
+        .tool-card {
+          padding: 2rem;
+          border-radius: 20px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .tool-card::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+          opacity: 0;
+          transition: opacity 0.3s ease;
+        }
+
+        .tool-card:hover {
+          transform: translateY(-8px) scale(1.02);
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+        }
+
+        .tool-card:hover::before {
+          opacity: 1;
+        }
+
+        .tool-header {
+          display: flex;
+          align-items: center;
+          gap: 1rem;
+          margin-bottom: 1rem;
+        }
+
+        .tool-icon {
+          font-size: 2.5rem;
+        }
+
+        .tool-title {
+          font-size: 1.3rem;
+          font-weight: 600;
+        }
+
+        .tool-description {
+          opacity: 0.9;
+          margin-bottom: 1.5rem;
+          line-height: 1.6;
+        }
+
+        .tool-features {
+          list-style: none;
+          padding: 0;
+        }
+
+        .tool-features li {
+          padding: 0.3rem 0;
+          opacity: 0.8;
+          font-size: 0.9rem;
+        }
+
+        .tool-features li::before {
+          content: '✓ ';
+          color: #10b981;
+          font-weight: 600;
+        }
+
+        .fab {
+          position: fixed;
+          bottom: 2rem;
+          right: 2rem;
+          width: 60px;
+          height: 60px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #667eea, #764ba2);
+          border: none;
+          color: #fff;
+          font-size: 1.5rem;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          z-index: 1000;
+          box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+        }
+
+        .fab:hover {
+          transform: scale(1.1);
+          box-shadow: 0 12px 40px rgba(102, 126, 234, 0.4);
+        }
+
+        .loading {
+          display: inline-block;
+          width: 20px;
+          height: 20px;
+          border: 3px solid rgba(255,255,255,.3);
+          border-radius: 50%;
+          border-top-color: #fff;
+          animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 1024px) {
+          .main-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .hero h1 {
+            font-size: 2.2rem;
+          }
+          
+          .hero p {
+            font-size: 1rem;
+          }
+          
+          .quick-actions {
+            grid-template-columns: 1fr;
+          }
+          
+          .tools-grid {
+            grid-template-columns: 1fr;
+          }
+          
+          .container {
+            padding: 0 1rem;
+          }
+          
+          .header {
+            padding: 1rem;
+          }
+          
+          .metric-cards {
+            grid-template-columns: 1fr;
           }
         }
       `}</style>

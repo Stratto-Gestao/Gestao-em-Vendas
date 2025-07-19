@@ -177,9 +177,8 @@ const MrRepresentacoes = () => {
 
   // Calcular estatísticas
   const stats = {
-    totalTasks: routineTasks.length + delegatedTasks.length + proposals.length,
-    completedTasks: [...routineTasks, ...delegatedTasks, ...proposals].filter(t => t.completed).length,
-    routineComplete: routineTasks.filter(t => t.completed).length,
+    totalTasks: delegatedTasks.length + proposals.length,
+    completedTasks: [...delegatedTasks, ...proposals].filter(t => t.completed).length,
     delegatedComplete: delegatedTasks.filter(t => t.completed).length,
     proposalsComplete: proposals.filter(t => t.completed).length
   };
@@ -224,22 +223,6 @@ const MrRepresentacoes = () => {
 
       {/* Cards de Estatísticas */}
       <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-icon blue">
-            <ClipboardList size={24} />
-          </div>
-          <div className="stat-content">
-            <div className="stat-value">{stats.routineComplete}/{routineTasks.length}</div>
-            <div className="stat-label">Rotina Diária</div>
-            <div className="stat-progress">
-              <div 
-                className="progress-bar" 
-                style={{ width: `${routineTasks.length > 0 ? (stats.routineComplete / routineTasks.length) * 100 : 0}%` }}
-              ></div>
-            </div>
-          </div>
-        </div>
-
         <div className="stat-card">
           <div className="stat-icon green">
             <Building size={24} />
@@ -292,47 +275,6 @@ const MrRepresentacoes = () => {
         {/* Coluna Principal - Tarefas */}
         <div className="tasks-column">
           
-          {/* Checklist de Rotina Diária */}
-          <div className="task-section">
-            <div className="section-header">
-              <div className="section-title">
-                <Clock size={22} />
-                <h3>Checklist de Rotina Diária</h3>
-              </div>
-              <div className="section-badge">
-                {routineTasks.filter(t => !t.completed).length} pendentes
-              </div>
-            </div>
-
-            <div className="task-list">
-              {routineTasks.map(task => (
-                <div 
-                  key={task.id} 
-                  className={`task-item ${task.completed ? 'completed' : ''}`}
-                  onClick={() => handleToggle(task.id, routineTasks, setRoutineTasks)}
-                >
-                  <div className="task-checkbox">
-                    <CheckCircle size={20} className="checkmark" />
-                  </div>
-                  <div className="task-content">
-                    <div className="task-text">{task.text}</div>
-                    <div className="task-meta">
-                      <span className="frequency-badge">{task.frequency}</span>
-                      {task.lastCompleted && (
-                        <span className="last-completed">
-                          Última vez: {task.lastCompleted}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="task-icon">
-                    <task.icon size={20} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
           {/* Atividades Delegadas */}
           <div className="task-section">
             <div className="section-header">
@@ -538,7 +480,7 @@ const MrRepresentacoes = () => {
             </div>
 
             <div className="completed-list">
-              {[...routineTasks, ...delegatedTasks, ...proposals]
+              {[...delegatedTasks, ...proposals]
                 .filter(task => task.completed)
                 .map(task => (
                   <div key={task.id} className="completed-item">
@@ -549,7 +491,7 @@ const MrRepresentacoes = () => {
                   </div>
                 ))}
               
-              {[...routineTasks, ...delegatedTasks, ...proposals].filter(t => t.completed).length === 0 && (
+              {[...delegatedTasks, ...proposals].filter(t => t.completed).length === 0 && (
                 <div className="empty-state">
                   <AlertCircle size={24} />
                   <p>Nenhuma tarefa concluída ainda</p>
