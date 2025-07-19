@@ -1,4 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import * as XLSX from 'xlsx';
+import { AuthContext } from '../contexts/AuthContextDef';
+import { useMrRepresentacoes } from '../hooks/useMrRepresentacoes';
 import { 
   CheckSquare, 
   MessageCircle, 
@@ -17,36 +20,84 @@ import {
   AlertCircle,
   Plus,
   Edit,
-  Eye
+  Eye,
+  X,
+  Flag,
+  AlertTriangle,
+  Trash2
 } from 'lucide-react';
 
 const MrRepresentacoes = () => {
-  // Estado das tarefas de rotina
-  const [routineTasks, setRoutineTasks] = useState([]);
+  const { userRole } = useContext(AuthContext);
+  const isSuperAdmin = userRole === 'SUPER_ADMIN';
 
-  // Estado das atividades delegadas pelo representante
-  const [delegatedTasks, setDelegatedTasks] = useState([]);
+  // Hook do Firebase para MR Representações
+  const {
+    delegatedTasks,
+    biddings,
+    weekHistory,
+    proposals,
+    routineTasks,
+    wonBiddings,
+    lostBiddings,
+    loading,
+    error,
+    addDelegatedTask,
+    updateDelegatedTask,
+    completeDelegatedTask,
+    reportTaskProblem,
+    addProposal,
+    updateProposal,
+    completeProposal,
+    addBidding,
+    updateBidding,
+    markBiddingAsWon,
+    markBiddingAsLost,
+    deleteBidding,
+    updateDocumentStatus,
+    archiveCompletedTasks,
+    clearWeeklyHistory
+  } = useMrRepresentacoes();
 
-  // Estado das solicitações e propostas
-  const [proposals, setProposals] = useState([]);
-
-  // Estado das licitações detalhadas
-  const [biddings, setBiddings] = useState([]);
-
+  // Estados locais para UI e formulários
   const [currentDate, setCurrentDate] = useState('');
+  const [currentTime, setCurrentTime] = useState(new Date()); // Para forçar re-renderização
+  const [overdueTasks, setOverdueTasks] = useState(new Set()); // Para rastrear tarefas que ficaram em atraso
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showProblemModal, setShowProblemModal] = useState(false);
+  const [editingTask, setEditingTask] = useState(null);
+  const [taskWithProblem, setTaskWithProblem] = useState(null);
+  const [problemDescription, setProblemDescription] = useState('');
+  
+  // Estados adicionais para controles da UI
+  const [expandedTask, setExpandedTask] = useState(null);
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [currentDateTime, setCurrentDateTime] = useState(new Date());
+  
   const [newTask, setNewTask] = useState({
-    text: '',
-    company: '',
+    title: '',
+    description: '',
     priority: 'Média',
-    deadline: ''
+    deadline: '',
+    deadlineTime: '',
+    representada: '',
+    acao: ''
   });
 
   // Estados para licitações
   const [showBiddingModal, setShowBiddingModal] = useState(false);
   const [showBiddingDetailModal, setShowBiddingDetailModal] = useState(false);
   const [showDocumentationModal, setShowDocumentationModal] = useState(false);
+  const [showBiddingEditModal, setShowBiddingEditModal] = useState(false);
+  const [showBiddingLostModal, setShowBiddingLostModal] = useState(false);
+  const [showBiddingHistoryModal, setShowBiddingHistoryModal] = useState(false);
   const [selectedBidding, setSelectedBidding] = useState(null);
+  const [editingBidding, setEditingBidding] = useState(null);
+  const [lostReason, setLostReason] = useState('');
+  const [showBiddingDetails, setShowBiddingDetails] = useState(false);
+  const [activeHistoryTab, setActiveHistoryTab] = useState('won'); // 'won' ou 'lost'
   
   const [newBidding, setNewBidding] = useState({
     number: '',
@@ -83,96 +134,327 @@ const MrRepresentacoes = () => {
     setCurrentDate(formattedDate);
   }, []);
 
-  // Função para alternar status das tarefas
-  const handleToggle = (id, list, setList) => {
-    setList(
-      list.map(task => 
-        task.id === id ? { 
-          ...task, 
-          completed: !task.completed,
-          lastCompleted: !task.completed ? new Date().toLocaleString('pt-BR') : null
-        } : task
-      )
-    );
+  // Verificar tarefas em atraso em tempo real
+  useEffect(() => {
+    const checkOverdueTasks = () => {
+      const now = new Date();
+      setCurrentTime(now);
+      
+      // Verificar se alguma tarefa ficou em atraso agora
+      const newOverdueTasks = new Set();
+      
+      delegatedTasks.forEach(task => {
+        if (!task.completed && task.deadline) {
+          const taskDeadline = new Date(`${task.deadline}T${task.deadlineTime || '23:59'}`);
+          const isOverdueNow = taskDeadline < now;
+          
+          if (isOverdueNow) {
+            newOverdueTasks.add(task.id);
+            
+            // Se a tarefa não estava em atraso antes, mostrar notificação
+            if (!overdueTasks.has(task.id)) {
+              // Notificação simples (você pode melhorar isso com um sistema de toast)
+              if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification('Tarefa em Atraso!', {
+                  body: `A tarefa "${task.title}" está atrasada!`,
+                  icon: '/favicon.ico'
+                });
+              }
+              
+              // Log no console para debug
+              console.log(`⚠️ Tarefa em atraso: ${task.title}`);
+            }
+          }
+        }
+      });
+      
+      // Só atualizar se houver mudança real
+      if (newOverdueTasks.size !== overdueTasks.size || 
+          ![...newOverdueTasks].every(id => overdueTasks.has(id))) {
+        setOverdueTasks(newOverdueTasks);
+      }
+    };
+
+    // Configurar intervalo para verificar a cada minuto
+    const interval = setInterval(checkOverdueTasks, 60000);
+
+    // Verificar imediatamente na primeira execução
+    if (delegatedTasks.length > 0) {
+      checkOverdueTasks();
+    }
+
+    return () => clearInterval(interval);
+  }, []); // Remover delegatedTasks das dependências para evitar loop
+
+  // Separar a verificação inicial das tarefas
+  useEffect(() => {
+    if (delegatedTasks.length > 0) {
+      const now = new Date();
+      const newOverdueTasks = new Set();
+      
+      delegatedTasks.forEach(task => {
+        if (!task.completed && task.deadline) {
+          const taskDeadline = new Date(`${task.deadline}T${task.deadlineTime || '23:59'}`);
+          if (taskDeadline < now) {
+            newOverdueTasks.add(task.id);
+          }
+        }
+      });
+      
+      setOverdueTasks(newOverdueTasks);
+    }
+  }, [delegatedTasks]); // Manter apenas para verificação inicial
+
+  // Solicitar permissão para notificações
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  // Função para concluir o dia: arquiva tarefas concluídas no histórico e remove das listas ativas
+  const handleFinishDay = async () => {
+    try {
+      await archiveCompletedTasks();
+      console.log('Tarefas concluídas arquivadas com sucesso!');
+    } catch (error) {
+      console.error('Erro ao concluir o dia:', error);
+      alert('Erro ao concluir o dia: ' + error.message);
+    }
+  };
+
+  // Função para exportar histórico semanal para Excel e limpar histórico
+  const handleExportAndClearHistory = async () => {
+    if (weekHistory.length === 0) return;
+    // Monta os dados para a planilha
+    const data = weekHistory.map((t, idx) => ({
+      'Nº': idx + 1,
+      'Tipo': t.type === 'delegada' ? 'Delegada' : 'Proposta',
+      'Título': t.title || t.text || '',
+      'Descrição': t.description || '',
+      'Representada': t.representada || t.company || '',
+      'Ação': t.acao || '',
+      'Prioridade': t.priority || '',
+      'Prazo': t.deadline ? new Date(t.deadline).toLocaleDateString('pt-BR') : '',
+      'Horário Prazo': t.deadlineTime || '',
+      'Problemas Encontrados': t.problems && t.problems.length > 0 ? 
+        t.problems.map(p => p.description).join('; ') : 'Nenhum',
+      'Tempo para Conclusão (dias)': t.timeToComplete || 0,
+      'Data Finalização': t.finishedAt || '',
+      'Data Criação': t.createdAt ? new Date(t.createdAt).toLocaleString('pt-BR') : ''
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'HistoricoSemana');
+    XLSX.writeFile(wb, `Historico_Semanal_${new Date().toISOString().slice(0,10)}.xlsx`);
+    
+    try {
+      await clearWeeklyHistory();
+    } catch (error) {
+      console.error('Erro ao limpar histórico:', error);
+    }
+  };
+
+  // Função para verificar se a tarefa está atrasada
+  const isTaskOverdue = (deadline, deadlineTime, completed) => {
+    if (completed) return false;
+    if (!deadline) return false;
+    
+    // Usar currentTime para garantir re-renderização quando o tempo muda
+    const now = currentTime;
+    const taskDeadline = new Date(`${deadline}T${deadlineTime || '23:59'}`);
+    return taskDeadline < now;
   };
 
   // Função para adicionar nova tarefa delegada
-  const handleAddTask = (e) => {
+  const handleAddTask = async (e) => {
     e.preventDefault();
-    if (!newTask.text.trim()) return;
+    if (!newTask.title.trim()) return;
 
-    const task = {
-      id: Date.now(),
-      text: newTask.text,
-      company: newTask.company,
-      priority: newTask.priority,
-      deadline: newTask.deadline,
-      completed: false,
-      icon: FileStack
-    };
+    try {
+      console.log('Adicionando tarefa:', newTask);
+      await addDelegatedTask({
+        title: newTask.title,
+        description: newTask.description,
+        priority: newTask.priority,
+        deadline: newTask.deadline,
+        deadlineTime: newTask.deadlineTime,
+        representada: newTask.representada,
+        acao: newTask.acao
+      });
+      
+      console.log('Tarefa adicionada com sucesso!');
+      setNewTask({ 
+        title: '', 
+        description: '', 
+        priority: 'Média', 
+        deadline: '', 
+        deadlineTime: '',
+        representada: '',
+        acao: ''
+      });
+      setShowAddModal(false);
+    } catch (error) {
+      console.error('Erro ao adicionar tarefa:', error);
+      alert('Erro ao adicionar tarefa: ' + error.message);
+    }
+  };
 
-    setDelegatedTasks([...delegatedTasks, task]);
-    setNewTask({ text: '', company: '', priority: 'Média', deadline: '' });
-    setShowAddModal(false);
+  // Função para editar tarefa (apenas SUPER_ADMIN)
+  const handleEditTask = (task) => {
+    if (!isSuperAdmin) return;
+    setEditingTask({
+      ...task,
+      deadlineTime: task.deadlineTime || ''
+    });
+    setShowEditModal(true);
+  };
+
+  // Função para salvar edição da tarefa
+  const handleSaveEdit = async (e) => {
+    e.preventDefault();
+    if (!editingTask.title.trim()) return;
+
+    try {
+      await updateDelegatedTask(editingTask.id, {
+        title: editingTask.title,
+        description: editingTask.description,
+        priority: editingTask.priority,
+        deadline: editingTask.deadline,
+        deadlineTime: editingTask.deadlineTime,
+        representada: editingTask.representada,
+        acao: editingTask.acao
+      });
+      
+      setShowEditModal(false);
+      setEditingTask(null);
+    } catch (error) {
+      console.error('Erro ao atualizar tarefa:', error);
+    }
+  };
+
+  // Função para concluir tarefa
+  const handleCompleteTask = async (taskId) => {
+    try {
+      await completeDelegatedTask(taskId);
+    } catch (error) {
+      console.error('Erro ao completar tarefa:', error);
+    }
+  };
+
+  // Função para reportar problema
+  const handleReportProblem = (task) => {
+    setTaskWithProblem(task);
+    setProblemDescription('');
+    setShowProblemModal(true);
+  };
+
+  // Função para salvar problema reportado
+  const handleSaveProblem = async () => {
+    if (!problemDescription.trim()) return;
+
+    try {
+      await reportTaskProblem(taskWithProblem.id, problemDescription);
+      setShowProblemModal(false);
+      setTaskWithProblem(null);
+      setProblemDescription('');
+    } catch (error) {
+      console.error('Erro ao reportar problema:', error);
+    }
   };
 
   // Função para adicionar nova licitação
-  const handleAddBidding = (e) => {
+  const handleAddBidding = async (e) => {
     e.preventDefault();
     if (!newBidding.number.trim() || !newBidding.title.trim()) return;
 
-    const bidding = {
-      id: Date.now(),
-      ...newBidding,
-      progress: 10,
-      documents: [
-        { name: 'Proposta Comercial', status: 'pendente', required: true },
-        { name: 'Documentação de Habilitação', status: 'pendente', required: true },
-        { name: 'Certidões', status: 'pendente', required: true }
-      ],
-      timeline: [
-        { stage: 'Edital Publicado', date: new Date().toISOString().split('T')[0], status: 'completed' },
-        { stage: 'Proposta Enviada', date: newBidding.openingDate, status: 'pending' },
-        { stage: 'Habilitação', date: '', status: 'pending' },
-        { stage: 'Análise de Propostas', date: '', status: 'pending' },
-        { stage: 'Resultado Final', date: '', status: 'pending' }
-      ]
-    };
-
-    setBiddings([...biddings, bidding]);
-    setNewBidding({
-      number: '',
-      title: '',
-      client: '',
-      value: '',
-      openingDate: '',
-      deliveryDate: '',
-      currentStage: 'Preparando Documentação',
-      nextAction: ''
-    });
-    setShowBiddingModal(false);
+    try {
+      await addBidding(newBidding);
+      setNewBidding({
+        number: '',
+        title: '',
+        client: '',
+        value: '',
+        openingDate: '',
+        deliveryDate: '',
+        currentStage: 'Preparando Documentação',
+        nextAction: ''
+      });
+      setShowBiddingModal(false);
+    } catch (error) {
+      console.error('Erro ao adicionar licitação:', error);
+    }
   };
 
-  // Função para atualizar status do documento
-  const updateDocumentStatus = (biddingId, documentName, newStatus) => {
-    setBiddings(biddings.map(bidding => {
-      if (bidding.id === biddingId) {
-        const updatedDocuments = bidding.documents.map(doc => 
-          doc.name === documentName ? { ...doc, status: newStatus } : doc
-        );
-        
-        const totalDocs = updatedDocuments.filter(d => d.required).length;
-        const completedDocs = updatedDocuments.filter(d => d.required && d.status === 'enviado').length;
-        const newProgress = Math.round((completedDocs / totalDocs) * 100);
-        
-        return {
-          ...bidding,
-          documents: updatedDocuments,
-          progress: newProgress
-        };
+  // Função para editar licitação
+  const handleEditBidding = (bidding) => {
+    setEditingBidding({ ...bidding });
+    setShowBiddingEditModal(true);
+  };
+
+  // Função para salvar edição da licitação
+  const handleSaveBiddingEdit = async (e) => {
+    e.preventDefault();
+    if (!editingBidding.number.trim() || !editingBidding.title.trim()) return;
+
+    try {
+      await updateBidding(editingBidding.id, editingBidding);
+      setShowBiddingEditModal(false);
+      setEditingBidding(null);
+    } catch (error) {
+      console.error('Erro ao atualizar licitação:', error);
+    }
+  };
+
+  // Função para marcar licitação como ganha
+  const handleBiddingWon = async (bidding) => {
+    const wonReason = prompt('Motivo da vitória (opcional):');
+    if (wonReason !== null) { // null significa que cancelou
+      try {
+        await markBiddingAsWon(bidding.id, wonReason || 'Licitação ganha');
+        alert('Licitação marcada como ganha com sucesso!');
+      } catch (error) {
+        console.error('Erro ao marcar licitação como ganha:', error);
+        alert('Erro ao marcar licitação como ganha. Tente novamente.');
       }
-      return bidding;
-    }));
+    }
+  };
+
+  // Função para marcar licitação como perdida
+  const handleBiddingLost = (bidding) => {
+    setSelectedBidding(bidding);
+    setLostReason('');
+    setShowBiddingLostModal(true);
+  };
+
+  // Função para salvar motivo da perda
+  const handleSaveLostReason = async () => {
+    if (!lostReason.trim() || !selectedBidding?.id) {
+      alert('Por favor, informe o motivo da perda.');
+      return;
+    }
+
+    try {
+      await markBiddingAsLost(selectedBidding.id, lostReason);
+      setShowBiddingLostModal(false);
+      setSelectedBidding(null);
+      setLostReason('');
+      alert('Licitação marcada como perdida com sucesso!');
+    } catch (error) {
+      console.error('Erro ao marcar licitação como perdida:', error);
+      alert('Erro ao marcar licitação como perdida. Tente novamente.');
+    }
+  };
+
+  // Função para excluir licitação
+  const handleDeleteBidding = async (biddingId) => {
+    if (window.confirm('Tem certeza que deseja excluir esta licitação?')) {
+      try {
+        await deleteBidding(biddingId);
+      } catch (error) {
+        console.error('Erro ao excluir licitação:', error);
+      }
+    }
   };
 
   // Calcular estatísticas
@@ -195,8 +477,70 @@ const MrRepresentacoes = () => {
     }
   };
 
+  // Função para obter cor da ação
+  const getAcaoColor = (acao) => {
+    switch (acao) {
+      case 'Email': return 'acao-email';
+      case 'Mensagem': return 'acao-mensagem';
+      case 'Ligação': return 'acao-ligacao';
+      case 'Pesquisa': return 'acao-pesquisa';
+      case 'Licitação': return 'acao-licitacao';
+      default: return 'acao-default';
+    }
+  };
+
+  // Função para obter ícone da ação
+  const getAcaoIcon = (acao) => {
+    const iconProps = { size: 12 };
+    switch (acao) {
+      case 'Email': return <Send {...iconProps} />;
+      case 'Mensagem': return <MessageCircle {...iconProps} />;
+      case 'Ligação': return <Phone {...iconProps} />;
+      case 'Pesquisa': return <Eye {...iconProps} />;
+      case 'Licitação': return <FileStack {...iconProps} />;
+      default: return <AlertCircle {...iconProps} />;
+    }
+  };
+
+  // Função para calcular dias de atraso
+  const calculateDaysOverdue = (deadline, deadlineTime) => {
+    if (!deadline) return 0;
+    
+    const now = new Date();
+    const taskDeadline = new Date(`${deadline}T${deadlineTime || '23:59'}`);
+    const diffTime = now - taskDeadline;
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    return diffDays > 0 ? diffDays : 0;
+  };
+
+  // Função para obter tarefas atrasadas há mais de 24h
+  const getOverdueTasksOver24h = () => {
+    return delegatedTasks.filter(task => {
+      if (task.completed) return false;
+      const daysOverdue = calculateDaysOverdue(task.deadline, task.deadlineTime);
+      return daysOverdue >= 1; // Mais de 24h = 1 dia ou mais
+    });
+  };
+
   return (
     <div className="mr-page">
+      {/* Loading state */}
+      {loading && (
+        <div className="loading-overlay">
+          <div className="loading-spinner"></div>
+          <p>Carregando dados...</p>
+        </div>
+      )}
+
+      {/* Error state */}
+      {error && (
+        <div className="error-banner">
+          <AlertCircle size={16} />
+          <span>Erro ao carregar dados: {error.message}</span>
+        </div>
+      )}
+
       {/* Header Principal */}
       <div className="page-header">
         <div className="header-content">
@@ -294,44 +638,128 @@ const MrRepresentacoes = () => {
             </div>
 
             <div className="task-list">
-              {delegatedTasks.map(task => (
-                <div 
-                  key={task.id} 
-                  className={`task-item delegated ${task.completed ? 'completed' : ''}`}
-                  onClick={() => handleToggle(task.id, delegatedTasks, setDelegatedTasks)}
-                >
-                  <div className="task-checkbox">
-                    <CheckCircle size={20} className="checkmark" />
-                  </div>
-                  <div className="task-content">
-                    <div className="task-text">{task.text}</div>
-                    <div className="task-meta">
-                      <span className="company-badge">{task.company}</span>
-                      <span className={`priority-badge ${getPriorityColor(task.priority)}`}>
-                        {task.priority}
-                      </span>
-                      {task.deadline && (
-                        <span className="deadline-badge">
-                          <Calendar size={14} />
-                          {new Date(task.deadline).toLocaleDateString('pt-BR')}
-                        </span>
+              {delegatedTasks
+                .filter(task => !task.completed) // Filtrar tarefas não concluídas
+                .map(task => {
+                const isOverdue = isTaskOverdue(task.deadline, task.deadlineTime, task.completed);
+                return (
+                  <div 
+                    key={task.id} 
+                    className={`task-item delegated ${task.completed ? 'completed' : ''} ${isOverdue ? 'overdue' : ''}`}
+                  >
+                    {/* Indicador de atraso */}
+                    {isOverdue && (
+                      <div className="overdue-indicator">
+                        <AlertTriangle size={16} />
+                        <span>Tarefa em atraso</span>
+                      </div>
+                    )}
+
+                    <div className="task-main-content">
+                      <div className="task-checkbox" onClick={() => handleCompleteTask(task.id)}>
+                        <CheckCircle size={20} className="checkmark" />
+                      </div>
+                      
+                      <div className="task-content">
+                        <div className="task-title">{task.title}</div>
+                        {task.description && (
+                          <div className="task-description">{task.description}</div>
+                        )}
+                        <div className="task-meta">
+                          <span className={`priority-badge ${getPriorityColor(task.priority)}`}>
+                            <Flag size={12} />
+                            {task.priority}
+                          </span>
+                          {task.representada && (
+                            <span className="representada-badge">
+                              <Building size={12} />
+                              {task.representada}
+                            </span>
+                          )}
+                          {task.acao && (
+                            <span className={`acao-badge ${getAcaoColor(task.acao)}`}>
+                              {getAcaoIcon(task.acao)}
+                              {task.acao}
+                            </span>
+                          )}
+                          {task.deadline && (
+                            <span className="deadline-badge">
+                              <Calendar size={14} />
+                              {new Date(task.deadline).toLocaleDateString('pt-BR')}
+                              {task.deadlineTime && ` às ${task.deadlineTime}`}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Problemas reportados */}
+                        {task.problems && task.problems.length > 0 && (
+                          <div className="task-problems">
+                            <div className="problems-header">
+                              <AlertCircle size={14} />
+                              <span>Problemas reportados ({task.problems.length})</span>
+                            </div>
+                            {task.problems.map(problem => (
+                              <div key={problem.id} className="problem-item">
+                                <div className="problem-description">{problem.description}</div>
+                                <div className="problem-meta">
+                                  Reportado em {new Date(problem.reportedAt).toLocaleString('pt-BR')}
+                                  {problem.reportedBy && ` por ${problem.reportedBy}`}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="task-icon">
+                        {/* Ícone foi removido para corrigir erro, precisa ser reimplementado se necessário */}
+                      </div>
+                    </div>
+
+                    {/* Botões de ação */}
+                    <div className="task-actions">
+                      {isSuperAdmin && (
+                        <button 
+                          className="action-btn edit"
+                          onClick={() => handleEditTask(task)}
+                          title="Editar tarefa"
+                        >
+                          <Edit size={16} />
+                        </button>
+                      )}
+                      
+                      {!task.completed && (
+                        <button 
+                          className="action-btn complete"
+                          onClick={() => handleCompleteTask(task.id)}
+                          title="Concluir tarefa"
+                        >
+                          <CheckCircle size={16} />
+                        </button>
+                      )}
+                      
+                      {!task.completed && (
+                        <button 
+                          className="action-btn problem"
+                          onClick={() => handleReportProblem(task)}
+                          title="Reportar problema"
+                        >
+                          <AlertCircle size={16} />
+                        </button>
                       )}
                     </div>
                   </div>
-                  <div className="task-icon">
-                    <task.icon size={20} />
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
-          {/* Acompanhamento de Propostas */}
+          {/* Gestão Detalhada de Licitações */}
           <div className="task-section">
             <div className="section-header">
               <div className="section-title">
-                <FileStack size={22} />
-                <h3>Acompanhamento de Propostas e Licitações</h3>
+                <Target size={22} />
+                <h3>Gestão Detalhada de Licitações</h3>
               </div>
               <div className="section-actions">
                 <button 
@@ -349,86 +777,52 @@ const MrRepresentacoes = () => {
                   Nova Licitação
                 </button>
               </div>
-            </div>
-
-            <div className="task-list">
-              {proposals.map(proposal => (
-                <div 
-                  key={proposal.id} 
-                  className={`task-item proposal ${proposal.completed ? 'completed' : ''}`}
-                  onClick={() => handleToggle(proposal.id, proposals, setProposals)}
-                >
-                  <div className="task-checkbox">
-                    <CheckCircle size={20} className="checkmark" />
-                  </div>
-                  <div className="task-content">
-                    <div className="task-text">{proposal.text}</div>
-                    <div className="task-meta">
-                      <span className="client-badge">{proposal.client}</span>
-                      <span className="status-badge">{proposal.status}</span>
-                      <span className="value-badge">{proposal.value}</span>
-                    </div>
-                  </div>
-                  <div className="task-icon">
-                    <proposal.icon size={20} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Gestão Detalhada de Licitações */}
-          <div className="task-section">
-            <div className="section-header">
-              <div className="section-title">
-                <Target size={22} />
-                <h3>Gestão Detalhada de Licitações</h3>
-              </div>
               <div className="section-badge">
-                {biddings.length} licitações em acompanhamento
+                {biddings?.length || 0} licitações em acompanhamento
               </div>
             </div>
 
             <div className="biddings-grid">
-              {biddings.map(bidding => (
-                <div key={bidding.id} className="bidding-card">
-                  <div className="bidding-header">
-                    <div className="bidding-info">
-                      <h4 className="bidding-number">{bidding.number}</h4>
-                      <p className="bidding-title">{bidding.title}</p>
-                      <p className="bidding-client">{bidding.client}</p>
+              {biddings && biddings.length > 0 ? (
+                biddings.map(bidding => (
+                  <div key={bidding.id} className="bidding-card">
+                    <div className="bidding-header">
+                      <div className="bidding-info">
+                        <h4 className="bidding-number">{bidding.number}</h4>
+                        <p className="bidding-title">{bidding.title}</p>
+                        <p className="bidding-client">{bidding.client}</p>
+                      </div>
+                      <div className="bidding-value">{bidding.value}</div>
                     </div>
-                    <div className="bidding-value">{bidding.value}</div>
-                  </div>
 
-                  <div className="bidding-progress">
-                    <div className="progress-header">
-                      <span className="current-stage">{bidding.currentStage}</span>
-                      <span className="progress-percentage">{bidding.progress}%</span>
+                    <div className="bidding-progress">
+                      <div className="progress-header">
+                        <span className="current-stage">{bidding.currentStage}</span>
+                        <span className="progress-percentage">{bidding.progress}%</span>
+                      </div>
+                      <div className="progress-bar-container">
+                        <div 
+                          className="progress-bar-fill" 
+                          style={{ width: `${bidding.progress}%` }}
+                        ></div>
+                      </div>
                     </div>
-                    <div className="progress-bar-container">
-                      <div 
-                        className="progress-bar-fill" 
-                        style={{ width: `${bidding.progress}%` }}
-                      ></div>
-                    </div>
-                  </div>
 
-                  <div className="bidding-dates">
-                    <div className="date-item">
-                      <Calendar size={14} />
-                      <span>Abertura: {new Date(bidding.openingDate).toLocaleDateString('pt-BR')}</span>
+                    <div className="bidding-dates">
+                      <div className="date-item">
+                        <Calendar size={14} />
+                        <span>Abertura: {new Date(bidding.openingDate).toLocaleDateString('pt-BR')}</span>
+                      </div>
+                      <div className="date-item">
+                        <Clock size={14} />
+                        <span>Entrega: {new Date(bidding.deliveryDate).toLocaleDateString('pt-BR')}</span>
+                      </div>
                     </div>
-                    <div className="date-item">
-                      <Clock size={14} />
-                      <span>Entrega: {new Date(bidding.deliveryDate).toLocaleDateString('pt-BR')}</span>
-                    </div>
-                  </div>
 
-                  <div className="bidding-next-action">
-                    <AlertCircle size={16} />
-                    <span>{bidding.nextAction}</span>
-                  </div>
+                    <div className="bidding-next-action">
+                      <AlertCircle size={16} />
+                      <span>{bidding.nextAction}</span>
+                    </div>
 
                   <div className="bidding-actions">
                     <button 
@@ -441,15 +835,41 @@ const MrRepresentacoes = () => {
                       <Eye size={16} />
                       Ver Detalhes
                     </button>
-                    <button className="bidding-btn secondary">
+                    <button 
+                      className="bidding-btn secondary"
+                      onClick={() => handleEditBidding(bidding)}
+                    >
                       <Edit size={16} />
                       Editar
                     </button>
+                    <button 
+                      className="bidding-btn success"
+                      onClick={() => handleBiddingWon(bidding)}
+                      title="Marcar como ganha"
+                    >
+                      <CheckCircle size={16} />
+                      Ganha
+                    </button>
+                    <button 
+                      className="bidding-btn warning"
+                      onClick={() => handleBiddingLost(bidding)}
+                      title="Marcar como perdida"
+                    >
+                      <AlertCircle size={16} />
+                      Perdida
+                    </button>
+                    <button 
+                      className="bidding-btn danger"
+                      onClick={() => handleDeleteBidding(bidding.id)}
+                      title="Excluir licitação"
+                    >
+                      <Trash2 size={16} />
+                      Excluir
+                    </button>
                   </div>
                 </div>
-              ))}
-
-              {biddings.length === 0 && (
+              ))
+              ) : (
                 <div className="empty-biddings">
                   <Target size={48} />
                   <h3>Nenhuma licitação cadastrada</h3>
@@ -470,6 +890,7 @@ const MrRepresentacoes = () => {
         {/* Coluna Lateral - Resumo */}
         <div className="summary-column">
           
+
           {/* Tarefas Concluídas Hoje */}
           <div className="summary-section">
             <div className="section-header">
@@ -487,10 +908,9 @@ const MrRepresentacoes = () => {
                     <div className="completed-icon">
                       <CheckCircle size={16} />
                     </div>
-                    <div className="completed-text">{task.text}</div>
+                    <div className="completed-text">{task.title || task.text}</div>
                   </div>
                 ))}
-              
               {[...delegatedTasks, ...proposals].filter(t => t.completed).length === 0 && (
                 <div className="empty-state">
                   <AlertCircle size={24} />
@@ -499,31 +919,10 @@ const MrRepresentacoes = () => {
                 </div>
               )}
             </div>
-          </div>
-
-          {/* Próximas Ações */}
-          <div className="summary-section">
-            <div className="section-header">
-              <div className="section-title">
-                <Clock size={22} />
-                <h3>Próximas Ações</h3>
-              </div>
-            </div>
-
-            <div className="next-actions">
-              <div className="action-item">
-                <div className="action-time">09:00</div>
-                <div className="action-text">Verificar mensagens WhatsApp</div>
-              </div>
-              <div className="action-item">
-                <div className="action-time">10:30</div>
-                <div className="action-text">Postar stories Instagram</div>
-              </div>
-              <div className="action-item">
-                <div className="action-time">14:00</div>
-                <div className="action-text">Ligações para clientes</div>
-              </div>
-            </div>
+            {/* Botão Concluir Dia */}
+            {[...delegatedTasks, ...proposals].filter(t => t.completed).length > 0 && (
+              <button onClick={handleFinishDay} className="btn btn-primary" style={{marginTop:8, width:'100%'}}>Concluir dia</button>
+            )}
           </div>
 
           {/* Lembretes */}
@@ -536,14 +935,169 @@ const MrRepresentacoes = () => {
             </div>
 
             <div className="reminders-list">
-              <div className="reminder-item">
-                <div className="reminder-icon urgent">!</div>
-                <div className="reminder-text">Proposta #102 vence amanhã</div>
+              {getOverdueTasksOver24h().length === 0 ? (
+                <div className="reminder-item">
+                  <div className="reminder-icon normal">✅</div>
+                  <div className="reminder-text">Nenhuma tarefa em atraso há mais de 24h</div>
+                </div>
+              ) : (
+                getOverdueTasksOver24h().map(task => {
+                  const daysOverdue = calculateDaysOverdue(task.deadline, task.deadlineTime);
+                  return (
+                    <div key={task.id} className="reminder-item">
+                      <div className="reminder-icon urgent">!</div>
+                      <div className="reminder-text">
+                        <strong>{task.title}</strong> - em atraso há {daysOverdue} {daysOverdue === 1 ? 'dia' : 'dias'}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* Histórico da Semana */}
+          <div className="summary-section" style={{marginTop:16}}>
+            <div className="section-header" style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+              <div className="section-title">
+                <ClipboardList size={22} />
+                <h3>Histórico da Semana</h3>
               </div>
-              <div className="reminder-item">
-                <div className="reminder-icon normal">📋</div>
-                <div className="reminder-text">Relatório semanal na sexta</div>
+              <button 
+                className="btn btn-secondary"
+                style={{fontSize:13, padding:'4px 10px'}}
+                onClick={handleExportAndClearHistory}
+                disabled={weekHistory.length === 0}
+                title="Exportar e limpar histórico semanal"
+              >
+                Exportar & Limpar
+              </button>
+            </div>
+            <div className="history-list">
+              {weekHistory.length === 0 ? (
+                <div className="empty-state">
+                  <span style={{color:'#888'}}>Nenhuma tarefa finalizada nesta semana.</span>
+                </div>
+              ) : (
+                weekHistory.map((t, idx) => (
+                  <div key={t.id + '-' + idx} className="history-item">
+                    <div className="history-text">
+                      <strong>{t.title || t.text}</strong>
+                      {t.representada && (
+                        <span style={{fontSize:12, color:'#888'}}> ({t.representada})</span>
+                      )}
+                      {t.problems && t.problems.length > 0 && (
+                        <span style={{fontSize:11, color:'#e74c3c'}}> - {t.problems.length} problema(s)</span>
+                      )}
+                      <span style={{fontSize:11, color:'#aaa'}}> - {t.finishedAt}</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Histórico de Licitações */}
+          <div className="summary-section" style={{marginTop:16}}>
+            <div className="section-header">
+              <div className="section-title">
+                <Target size={22} />
+                <h3>Histórico de Licitações</h3>
               </div>
+              <div className="section-badge">
+                {wonBiddings.length + lostBiddings.length} finalizadas
+              </div>
+            </div>
+
+            <div className="history-tabs">
+              <button 
+                className={`tab-btn ${activeHistoryTab === 'won' ? 'active' : ''}`}
+                onClick={() => setActiveHistoryTab('won')}
+              >
+                <CheckCircle size={16} />
+                Ganhas ({wonBiddings.length})
+              </button>
+              <button 
+                className={`tab-btn ${activeHistoryTab === 'lost' ? 'active' : ''}`}
+                onClick={() => setActiveHistoryTab('lost')}
+              >
+                <AlertCircle size={16} />
+                Perdidas ({lostBiddings.length})
+              </button>
+            </div>
+
+            <div className="history-content">
+              {activeHistoryTab === 'won' && (
+                <div className="history-list">
+                  {wonBiddings.length > 0 ? (
+                    wonBiddings.map(bidding => (
+                      <div key={bidding.id} className="history-item won">
+                        <div className="history-info">
+                          <h4 className="history-number">{bidding.number}</h4>
+                          <p className="history-title">{bidding.title}</p>
+                          <p className="history-client">{bidding.client}</p>
+                        </div>
+                        <div className="history-details">
+                          <div className="history-value">{bidding.value}</div>
+                          <div className="history-date">
+                            {bidding.wonDate ? new Date(bidding.wonDate).toLocaleDateString('pt-BR') : 'N/A'}
+                          </div>
+                        </div>
+                        <button 
+                          className="history-view-btn"
+                          onClick={() => {
+                            setSelectedBidding(bidding);
+                            setShowBiddingHistoryModal(true);
+                          }}
+                        >
+                          <Eye size={16} />
+                        </button>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="empty-history">
+                      <CheckCircle size={32} />
+                      <p>Nenhuma licitação ganha ainda</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeHistoryTab === 'lost' && (
+                <div className="history-list">
+                  {lostBiddings.length > 0 ? (
+                    lostBiddings.map(bidding => (
+                      <div key={bidding.id} className="history-item lost">
+                        <div className="history-info">
+                          <h4 className="history-number">{bidding.number}</h4>
+                          <p className="history-title">{bidding.title}</p>
+                          <p className="history-client">{bidding.client}</p>
+                        </div>
+                        <div className="history-details">
+                          <div className="history-value">{bidding.value}</div>
+                          <div className="history-date">
+                            {bidding.lostDate ? new Date(bidding.lostDate).toLocaleDateString('pt-BR') : 'N/A'}
+                          </div>
+                        </div>
+                        <button 
+                          className="history-view-btn"
+                          onClick={() => {
+                            setSelectedBidding(bidding);
+                            setShowBiddingHistoryModal(true);
+                          }}
+                        >
+                          <Eye size={16} />
+                        </button>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="empty-history">
+                      <AlertCircle size={32} />
+                      <p>Nenhuma licitação perdida ainda</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -681,8 +1235,8 @@ const MrRepresentacoes = () => {
           <div className="modal-content extra-large" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div>
-                <h3 className="modal-title">{selectedBidding.number}</h3>
-                <p className="modal-subtitle">{selectedBidding.title}</p>
+                <h3 className="modal-title">{selectedBidding?.number || 'Licitação'}</h3>
+                <p className="modal-subtitle">{selectedBidding?.title || 'Título não disponível'}</p>
               </div>
               <button 
                 className="close-btn" 
@@ -697,7 +1251,7 @@ const MrRepresentacoes = () => {
               <div className="detail-section">
                 <h4 className="detail-title">Timeline do Processo</h4>
                 <div className="timeline">
-                  {selectedBidding.timeline.map((stage, index) => (
+                  {selectedBidding?.timeline?.map((stage, index) => (
                     <div key={index} className={`timeline-item ${stage.status}`}>
                       <div className="timeline-marker"></div>
                       <div className="timeline-content">
@@ -709,7 +1263,7 @@ const MrRepresentacoes = () => {
                         )}
                       </div>
                     </div>
-                  ))}
+                  )) || <p>Nenhuma timeline disponível</p>}
                 </div>
               </div>
 
@@ -717,30 +1271,38 @@ const MrRepresentacoes = () => {
               <div className="detail-section">
                 <h4 className="detail-title">Documentação</h4>
                 <div className="documents-grid">
-                  {selectedBidding.documents.map((doc, index) => (
-                    <div key={index} className={`document-item ${doc.status}`}>
-                      <div className="document-header">
-                        <span className="document-name">{doc.name}</span>
-                        <span className={`document-status ${doc.status}`}>
-                          {doc.status === 'enviado' && <CheckCircle size={16} />}
-                          {doc.status === 'pendente' && <Clock size={16} />}
-                          {doc.status === 'rascunho' && <Edit size={16} />}
-                          {doc.status}
-                        </span>
+                  {standardDocuments.map((standardDoc, index) => {
+                    const existingDoc = selectedBidding?.documents?.find(d => d.name === standardDoc.name);
+                    const docStatus = existingDoc ? existingDoc.status : 'pendente';
+                    
+                    return (
+                      <div key={index} className={`document-item ${docStatus}`}>
+                        <div className="document-header">
+                          <span className="document-name">{standardDoc.name}</span>
+                          <span className={`document-status ${docStatus}`}>
+                            {docStatus === 'enviado' && <CheckCircle size={16} />}
+                            {docStatus === 'pendente' && <Clock size={16} />}
+                            {docStatus === 'rascunho' && <Edit size={16} />}
+                            {docStatus}
+                          </span>
+                        </div>
+                        <div className="document-description">
+                          {standardDoc.description}
+                        </div>
+                        <div className="document-actions">
+                          <select
+                            value={docStatus}
+                            onChange={(e) => updateDocumentStatus(selectedBidding?.id, standardDoc.name, e.target.value)}
+                            className="status-select"
+                          >
+                            <option value="pendente">Pendente</option>
+                            <option value="rascunho">Em Rascunho</option>
+                            <option value="enviado">Enviado</option>
+                          </select>
+                        </div>
                       </div>
-                      <div className="document-actions">
-                        <select
-                          value={doc.status}
-                          onChange={(e) => updateDocumentStatus(selectedBidding.id, doc.name, e.target.value)}
-                          className="status-select"
-                        >
-                          <option value="pendente">Pendente</option>
-                          <option value="rascunho">Em Rascunho</option>
-                          <option value="enviado">Enviado</option>
-                        </select>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
@@ -749,19 +1311,19 @@ const MrRepresentacoes = () => {
                 <h4 className="detail-title">Informações Gerais</h4>
                 <div className="info-grid">
                   <div className="info-item">
-                    <strong>Cliente:</strong> {selectedBidding.client}
+                    <strong>Cliente:</strong> {selectedBidding?.client || 'N/A'}
                   </div>
                   <div className="info-item">
-                    <strong>Valor:</strong> {selectedBidding.value}
+                    <strong>Valor:</strong> {selectedBidding?.value || 'N/A'}
                   </div>
                   <div className="info-item">
-                    <strong>Abertura:</strong> {new Date(selectedBidding.openingDate).toLocaleDateString('pt-BR')}
+                    <strong>Abertura:</strong> {selectedBidding?.openingDate ? new Date(selectedBidding.openingDate).toLocaleDateString('pt-BR') : 'N/A'}
                   </div>
                   <div className="info-item">
-                    <strong>Entrega:</strong> {new Date(selectedBidding.deliveryDate).toLocaleDateString('pt-BR')}
+                    <strong>Entrega:</strong> {selectedBidding?.deliveryDate ? new Date(selectedBidding.deliveryDate).toLocaleDateString('pt-BR') : 'N/A'}
                   </div>
                   <div className="info-item">
-                    <strong>Próxima Ação:</strong> {selectedBidding.nextAction}
+                    <strong>Próxima Ação:</strong> {selectedBidding?.nextAction || 'N/A'}
                   </div>
                 </div>
               </div>
@@ -839,6 +1401,310 @@ const MrRepresentacoes = () => {
         </div>
       )}
 
+      {/* Modal Editar Licitação */}
+      {showBiddingEditModal && editingBidding && (
+        <div className="modal-overlay" onClick={() => setShowBiddingEditModal(false)}>
+          <div className="modal-content large" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">Editar Licitação</h3>
+              <button 
+                className="close-btn" 
+                onClick={() => setShowBiddingEditModal(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveBiddingEdit}>
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Número/Processo</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={editingBidding.number}
+                    onChange={(e) => setEditingBidding({ ...editingBidding, number: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Título/Objeto</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={editingBidding.title}
+                    onChange={(e) => setEditingBidding({ ...editingBidding, title: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Cliente/Órgão</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={editingBidding.client}
+                    onChange={(e) => setEditingBidding({ ...editingBidding, client: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Valor Estimado</label>
+                  <input
+                    type="text"
+                    className="form-input"
+                    value={editingBidding.value}
+                    onChange={(e) => setEditingBidding({ ...editingBidding, value: e.target.value })}
+                    placeholder="Ex: R$ 50.000,00"
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Data de Abertura</label>
+                  <input
+                    type="date"
+                    className="form-input"
+                    value={editingBidding.openingDate}
+                    onChange={(e) => setEditingBidding({ ...editingBidding, openingDate: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Data de Entrega</label>
+                  <input
+                    type="date"
+                    className="form-input"
+                    value={editingBidding.deliveryDate}
+                    onChange={(e) => setEditingBidding({ ...editingBidding, deliveryDate: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Estágio Atual</label>
+                  <select
+                    className="form-select"
+                    value={editingBidding.currentStage}
+                    onChange={(e) => setEditingBidding({ ...editingBidding, currentStage: e.target.value })}
+                  >
+                    <option value="Preparando Documentação">Preparando Documentação</option>
+                    <option value="Proposta Enviada">Proposta Enviada</option>
+                    <option value="Habilitação">Habilitação</option>
+                    <option value="Análise de Propostas">Análise de Propostas</option>
+                    <option value="Resultado Final">Resultado Final</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Próxima Ação</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={editingBidding.nextAction}
+                  onChange={(e) => setEditingBidding({ ...editingBidding, nextAction: e.target.value })}
+                  placeholder="Ex: Finalizar proposta técnica..."
+                />
+              </div>
+
+              <div className="modal-actions">
+                <button type="button" className="btn-cancel" onClick={() => setShowBiddingEditModal(false)}>
+                  Cancelar
+                </button>
+                <button type="submit" className="btn-save">
+                  Salvar Alterações
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Licitação Perdida */}
+      {showBiddingLostModal && selectedBidding && (
+        <div className="modal-overlay" onClick={() => setShowBiddingLostModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">Marcar Licitação como Perdida</h3>
+              <button 
+                className="close-btn" 
+                onClick={() => setShowBiddingLostModal(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <p><strong>Licitação:</strong> {selectedBidding?.number || 'N/A'} - {selectedBidding?.title || 'N/A'}</p>
+              
+              <div className="form-group">
+                <label className="form-label">Motivo da Perda</label>
+                <textarea
+                  className="form-textarea"
+                  value={lostReason}
+                  onChange={(e) => setLostReason(e.target.value)}
+                  placeholder="Descreva o motivo pelo qual a licitação foi perdida..."
+                  rows="4"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="modal-actions">
+              <button type="button" className="btn-cancel" onClick={() => setShowBiddingLostModal(false)}>
+                Cancelar
+              </button>
+              <button type="button" className="btn-danger" onClick={handleSaveLostReason}>
+                Confirmar Perda
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Histórico de Licitação */}
+      {showBiddingHistoryModal && selectedBidding && (
+        <div className="modal-overlay" onClick={() => setShowBiddingHistoryModal(false)}>
+          <div className="modal bidding-history-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title-section">
+                <h3 className="modal-title">
+                  {selectedBidding?.number || 'Licitação'} - 
+                  {selectedBidding.status === 'won' ? ' GANHA' : ' PERDIDA'}
+                </h3>
+                <p className="modal-subtitle">{selectedBidding?.title || 'Título não disponível'}</p>
+              </div>
+              <button 
+                className="modal-close"
+                onClick={() => setShowBiddingHistoryModal(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="bidding-history-content">
+              {/* Status Badge */}
+              <div className={`status-badge-large ${selectedBidding.status}`}>
+                {selectedBidding.status === 'won' ? (
+                  <>
+                    <CheckCircle size={24} />
+                    <span>LICITAÇÃO GANHA</span>
+                  </>
+                ) : (
+                  <>
+                    <AlertCircle size={24} />
+                    <span>LICITAÇÃO PERDIDA</span>
+                  </>
+                )}
+              </div>
+
+              {/* Informações Gerais */}
+              <div className="detail-section">
+                <h4 className="detail-title">Informações da Licitação</h4>
+                <div className="info-grid">
+                  <div className="info-item">
+                    <strong>Cliente:</strong> {selectedBidding?.client || 'N/A'}
+                  </div>
+                  <div className="info-item">
+                    <strong>Valor:</strong> {selectedBidding?.value || 'N/A'}
+                  </div>
+                  <div className="info-item">
+                    <strong>Data de Abertura:</strong> {selectedBidding?.openingDate ? new Date(selectedBidding.openingDate).toLocaleDateString('pt-BR') : 'N/A'}
+                  </div>
+                  <div className="info-item">
+                    <strong>Data de Entrega:</strong> {selectedBidding?.deliveryDate ? new Date(selectedBidding.deliveryDate).toLocaleDateString('pt-BR') : 'N/A'}
+                  </div>
+                  {selectedBidding.status === 'won' && (
+                    <>
+                      <div className="info-item">
+                        <strong>Data da Vitória:</strong> {selectedBidding?.wonDate ? new Date(selectedBidding.wonDate).toLocaleDateString('pt-BR') : 'N/A'}
+                      </div>
+                      {selectedBidding.wonReason && (
+                        <div className="info-item full-width">
+                          <strong>Motivo da Vitória:</strong> {selectedBidding.wonReason}
+                        </div>
+                      )}
+                    </>
+                  )}
+                  {selectedBidding.status === 'lost' && (
+                    <>
+                      <div className="info-item">
+                        <strong>Data da Perda:</strong> {selectedBidding?.lostDate ? new Date(selectedBidding.lostDate).toLocaleDateString('pt-BR') : 'N/A'}
+                      </div>
+                      {selectedBidding.lostReason && (
+                        <div className="info-item full-width">
+                          <strong>Motivo da Perda:</strong> {selectedBidding.lostReason}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Timeline se existir */}
+              {selectedBidding?.timeline && (
+                <div className="detail-section">
+                  <h4 className="detail-title">Timeline do Processo</h4>
+                  <div className="timeline">
+                    {selectedBidding.timeline.map((stage, index) => (
+                      <div key={index} className={`timeline-item ${stage.status}`}>
+                        <div className="timeline-marker"></div>
+                        <div className="timeline-content">
+                          <h5 className="timeline-stage">{stage.stage}</h5>
+                          {stage.date && (
+                            <p className="timeline-date">
+                              {new Date(stage.date).toLocaleDateString('pt-BR')}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Documentos se existir */}
+              {selectedBidding?.documents && (
+                <div className="detail-section">
+                  <h4 className="detail-title">Documentação</h4>
+                  <div className="documents-grid-readonly">
+                    {selectedBidding.documents.map((doc, index) => (
+                      <div key={index} className={`document-item-readonly ${doc.status}`}>
+                        <div className="document-header">
+                          <span className="document-name">{doc.name}</span>
+                          <span className={`document-status ${doc.status}`}>
+                            {doc.status === 'enviado' && <CheckCircle size={16} />}
+                            {doc.status === 'pendente' && <Clock size={16} />}
+                            {doc.status === 'rascunho' && <Edit size={16} />}
+                            {doc.status}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="modal-footer">
+              <button 
+                type="button" 
+                className="btn-cancel" 
+                onClick={() => setShowBiddingHistoryModal(false)}
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal Adicionar Tarefa */}
       {showAddModal && (
         <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
@@ -849,31 +1715,31 @@ const MrRepresentacoes = () => {
                 className="close-btn" 
                 onClick={() => setShowAddModal(false)}
               >
-                ×
+                <X size={20} />
               </button>
             </div>
 
             <form onSubmit={handleAddTask}>
               <div className="form-group">
-                <label className="form-label">Descrição da Tarefa</label>
+                <label className="form-label">Título da Tarefa *</label>
                 <input
                   type="text"
                   className="form-input"
-                  value={newTask.text}
-                  onChange={(e) => setNewTask({ ...newTask, text: e.target.value })}
+                  value={newTask.title}
+                  onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
                   placeholder="Ex: Enviar documentação para cliente..."
                   required
                 />
               </div>
 
               <div className="form-group">
-                <label className="form-label">Empresa/Cliente</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={newTask.company}
-                  onChange={(e) => setNewTask({ ...newTask, company: e.target.value })}
-                  placeholder="Nome da empresa"
+                <label className="form-label">Descrição da Tarefa</label>
+                <textarea
+                  className="form-textarea"
+                  value={newTask.description}
+                  onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+                  placeholder="Descreva os detalhes da tarefa..."
+                  rows="3"
                 />
               </div>
 
@@ -892,12 +1758,57 @@ const MrRepresentacoes = () => {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Prazo</label>
+                  <label className="form-label">Representada</label>
+                  <select
+                    className="form-select"
+                    value={newTask.representada}
+                    onChange={(e) => setNewTask({ ...newTask, representada: e.target.value })}
+                  >
+                    <option value="">Selecione...</option>
+                    <option value="Harald">Harald</option>
+                    <option value="BWB">BWB</option>
+                    <option value="Libreplast">Libreplast</option>
+                    <option value="Liplast">Liplast</option>
+                    <option value="Embalagens Conceito">Embalagens Conceito</option>
+                    <option value="Caparroz">Caparroz</option>
+                    <option value="Dacolônia">Dacolônia</option>
+                    <option value="SugarArt">SugarArt</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Ação</label>
+                  <select
+                    className="form-select"
+                    value={newTask.acao}
+                    onChange={(e) => setNewTask({ ...newTask, acao: e.target.value })}
+                  >
+                    <option value="">Selecione...</option>
+                    <option value="Email">Email</option>
+                    <option value="Mensagem">Mensagem</option>
+                    <option value="Ligação">Ligação</option>
+                    <option value="Pesquisa">Pesquisa</option>
+                    <option value="Licitação">Licitação</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Data do Prazo</label>
                   <input
                     type="date"
                     className="form-input"
                     value={newTask.deadline}
                     onChange={(e) => setNewTask({ ...newTask, deadline: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Hora do Prazo</label>
+                  <input
+                    type="time"
+                    className="form-input"
+                    value={newTask.deadlineTime}
+                    onChange={(e) => setNewTask({ ...newTask, deadlineTime: e.target.value })}
                   />
                 </div>
               </div>
@@ -907,10 +1818,185 @@ const MrRepresentacoes = () => {
                   Cancelar
                 </button>
                 <button type="submit" className="btn-save">
-                  Adicionar Tarefa
+                  Criar Tarefa
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Editar Tarefa */}
+      {showEditModal && editingTask && (
+        <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">Editar Tarefa</h3>
+              <button 
+                className="close-btn" 
+                onClick={() => setShowEditModal(false)}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEdit}>
+              <div className="form-group">
+                <label className="form-label">Título da Tarefa *</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={editingTask.title}
+                  onChange={(e) => setEditingTask({ ...editingTask, title: e.target.value })}
+                  placeholder="Ex: Enviar documentação para cliente..."
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Descrição da Tarefa</label>
+                <textarea
+                  className="form-textarea"
+                  value={editingTask.description || ''}
+                  onChange={(e) => setEditingTask({ ...editingTask, description: e.target.value })}
+                  placeholder="Descreva os detalhes da tarefa..."
+                  rows="3"
+                />
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Prioridade</label>
+                  <select
+                    className="form-select"
+                    value={editingTask.priority}
+                    onChange={(e) => setEditingTask({ ...editingTask, priority: e.target.value })}
+                  >
+                    <option value="Baixa">Baixa</option>
+                    <option value="Média">Média</option>
+                    <option value="Alta">Alta</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Representada</label>
+                  <select
+                    className="form-select"
+                    value={editingTask.representada || ''}
+                    onChange={(e) => setEditingTask({ ...editingTask, representada: e.target.value })}
+                  >
+                    <option value="">Selecione...</option>
+                    <option value="Harald">Harald</option>
+                    <option value="BWB">BWB</option>
+                    <option value="Libreplast">Libreplast</option>
+                    <option value="Liplast">Liplast</option>
+                    <option value="Embalagens Conceito">Embalagens Conceito</option>
+                    <option value="Caparroz">Caparroz</option>
+                    <option value="Dacolônia">Dacolônia</option>
+                    <option value="SugarArt">SugarArt</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Ação</label>
+                  <select
+                    className="form-select"
+                    value={editingTask.acao || ''}
+                    onChange={(e) => setEditingTask({ ...editingTask, acao: e.target.value })}
+                  >
+                    <option value="">Selecione...</option>
+                    <option value="Email">Email</option>
+                    <option value="Mensagem">Mensagem</option>
+                    <option value="Ligação">Ligação</option>
+                    <option value="Pesquisa">Pesquisa</option>
+                    <option value="Licitação">Licitação</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Data do Prazo</label>
+                  <input
+                    type="date"
+                    className="form-input"
+                    value={editingTask.deadline || ''}
+                    onChange={(e) => setEditingTask({ ...editingTask, deadline: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Hora do Prazo</label>
+                  <input
+                    type="time"
+                    className="form-input"
+                    value={editingTask.deadlineTime || ''}
+                    onChange={(e) => setEditingTask({ ...editingTask, deadlineTime: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="modal-actions">
+                <button type="button" className="btn-cancel" onClick={() => setShowEditModal(false)}>
+                  Cancelar
+                </button>
+                <button type="submit" className="btn-save">
+                  Salvar Alterações
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Reportar Problema */}
+      {showProblemModal && taskWithProblem && (
+        <div className="modal-overlay" onClick={() => setShowProblemModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">Reportar Problema</h3>
+              <button 
+                className="close-btn" 
+                onClick={() => setShowProblemModal(false)}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="task-info">
+              <h4>Tarefa: {taskWithProblem.title}</h4>
+              {taskWithProblem.description && (
+                <p className="task-description">{taskWithProblem.description}</p>
+              )}
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Descrição do Problema *</label>
+              <textarea
+                className="form-textarea"
+                value={problemDescription}
+                onChange={(e) => setProblemDescription(e.target.value)}
+                placeholder="Descreva o problema encontrado..."
+                rows="4"
+                required
+              />
+            </div>
+
+            <div className="modal-actions">
+              <button 
+                type="button" 
+                className="btn-cancel" 
+                onClick={() => setShowProblemModal(false)}
+              >
+                Cancelar
+              </button>
+              <button 
+                type="button" 
+                className="btn-save btn-problem" 
+                onClick={handleSaveProblem}
+                disabled={!problemDescription.trim()}
+              >
+                Reportar Problema
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1375,7 +2461,9 @@ const MrRepresentacoes = () => {
         .deadline-badge,
         .client-badge,
         .status-badge,
-        .value-badge {
+        .value-badge,
+        .representada-badge,
+        .acao-badge {
           padding: 0.25rem 0.75rem;
           border-radius: 12px;
           font-size: 0.8rem;
@@ -1391,6 +2479,36 @@ const MrRepresentacoes = () => {
         }
 
         .company-badge {
+          background: rgba(139, 92, 246, 0.1);
+          color: #7c3aed;
+        }
+
+        .representada-badge {
+          background: rgba(16, 185, 129, 0.1);
+          color: #047857;
+        }
+
+        .acao-email {
+          background: rgba(239, 68, 68, 0.1);
+          color: #dc2626;
+        }
+
+        .acao-mensagem {
+          background: rgba(34, 197, 94, 0.1);
+          color: #16a34a;
+        }
+
+        .acao-ligacao {
+          background: rgba(59, 130, 246, 0.1);
+          color: #1e40af;
+        }
+
+        .acao-pesquisa {
+          background: rgba(245, 158, 11, 0.1);
+          color: #d97706;
+        }
+
+        .acao-licitacao {
           background: rgba(139, 92, 246, 0.1);
           color: #7c3aed;
         }
@@ -1446,6 +2564,251 @@ const MrRepresentacoes = () => {
         .task-item:hover .task-icon {
           color: #3b82f6;
           transform: scale(1.1);
+        }
+
+        /* Novos estilos para tarefas atrasadas */
+        .task-item.overdue {
+          background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+          border-color: #fca5a5;
+          border-width: 2px;
+          animation: pulse-red 2s infinite;
+        }
+
+        @keyframes pulse-red {
+          0%, 100% {
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+          }
+          50% {
+            box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+          }
+        }
+
+        .overdue-indicator {
+          position: absolute;
+          top: 8px;
+          right: 8px;
+          background: linear-gradient(135deg, #ef4444, #dc2626);
+          color: white;
+          padding: 4px 8px;
+          border-radius: 12px;
+          font-size: 0.75rem;
+          font-weight: 600;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          animation: blink 1s infinite alternate;
+          box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+        }
+
+        @keyframes blink {
+          0% {
+            opacity: 1;
+          }
+          100% {
+            opacity: 0.6;
+          }
+        }
+
+        /* Estrutura melhorada do task-item */
+        .task-main-content {
+          display: flex;
+          align-items: flex-start;
+          gap: 1rem;
+          width: 100%;
+        }
+
+        .task-title {
+          font-size: 1rem;
+          font-weight: 600;
+          color: #1e293b;
+          margin-bottom: 0.5rem;
+          line-height: 1.4;
+        }
+
+        .task-description {
+          font-size: 0.9rem;
+          color: #64748b;
+          margin-bottom: 0.5rem;
+          line-height: 1.4;
+          word-wrap: break-word;
+          word-break: break-word;
+          overflow-wrap: break-word;
+          max-height: 4.2rem; /* Aproximadamente 3 linhas */
+          overflow: hidden;
+          display: -webkit-box;
+          -webkit-line-clamp: 3;
+          -webkit-box-orient: vertical;
+        }
+
+        /* Ações da tarefa */
+        .task-actions {
+          display: flex;
+          gap: 0.5rem;
+          margin-top: 0.5rem;
+          opacity: 0;
+          transition: opacity 0.3s ease;
+        }
+
+        .task-item:hover .task-actions {
+          opacity: 1;
+        }
+
+        .action-btn {
+          padding: 0.5rem;
+          border: none;
+          border-radius: 8px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.3s ease;
+          font-size: 0.8rem;
+          font-weight: 500;
+        }
+
+        .action-btn.edit {
+          background: rgba(59, 130, 246, 0.1);
+          color: #2563eb;
+        }
+
+        .action-btn.edit:hover {
+          background: rgba(59, 130, 246, 0.2);
+          transform: scale(1.1);
+        }
+
+        .action-btn.complete {
+          background: rgba(34, 197, 94, 0.1);
+          color: #16a34a;
+        }
+
+        .action-btn.complete:hover {
+          background: rgba(34, 197, 94, 0.2);
+          transform: scale(1.1);
+        }
+
+        .action-btn.problem {
+          background: rgba(239, 68, 68, 0.1);
+          color: #dc2626;
+        }
+
+        .action-btn.problem:hover {
+          background: rgba(239, 68, 68, 0.2);
+          transform: scale(1.1);
+        }
+
+        /* Problemas reportados */
+        .task-problems {
+          margin-top: 0.75rem;
+          padding: 0.75rem;
+          background: rgba(239, 68, 68, 0.05);
+          border: 1px solid rgba(239, 68, 68, 0.2);
+          border-radius: 8px;
+        }
+
+        .problems-header {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          font-size: 0.85rem;
+          font-weight: 600;
+          color: #dc2626;
+          margin-bottom: 0.5rem;
+        }
+
+        .problem-item {
+          background: white;
+          padding: 0.5rem;
+          border-radius: 6px;
+          margin-bottom: 0.5rem;
+          border-left: 3px solid #dc2626;
+        }
+
+        .problem-item:last-child {
+          margin-bottom: 0;
+        }
+
+        .problem-description {
+          font-size: 0.85rem;
+          color: #1e293b;
+          margin-bottom: 0.25rem;
+        }
+
+        .problem-meta {
+          font-size: 0.75rem;
+          color: #64748b;
+          font-style: italic;
+        }
+
+        /* Melhorias nos formulários dos modais */
+        .form-textarea {
+          width: 100%;
+          padding: 0.75rem;
+          border: 1px solid #d1d5db;
+          border-radius: 8px;
+          font-size: 0.9rem;
+          font-family: inherit;
+          resize: vertical;
+          min-height: 80px;
+        }
+
+        .form-textarea:focus {
+          outline: none;
+          border-color: #3b82f6;
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .task-info {
+          background: rgba(241, 245, 249, 0.8);
+          padding: 1rem;
+          border-radius: 8px;
+          margin-bottom: 1rem;
+        }
+
+        .task-info h4 {
+          margin: 0 0 0.5rem 0;
+          color: #1e293b;
+          font-size: 1rem;
+        }
+
+        .task-info .task-description {
+          margin: 0;
+          font-size: 0.85rem;
+          color: #64748b;
+          word-wrap: break-word;
+          word-break: break-word;
+          overflow-wrap: break-word;
+          max-height: 3.4rem; /* Aproximadamente 2-3 linhas para contexto menor */
+          overflow: hidden;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+        }
+
+        .btn-problem {
+          background: linear-gradient(135deg, #ef4444, #dc2626);
+          color: white;
+        }
+
+        .btn-problem:hover {
+          background: linear-gradient(135deg, #dc2626, #b91c1c);
+        }
+
+        .btn-problem:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        /* Ajustes no form-row para 5 colunas */
+        .form-row {
+          display: grid;
+          grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+          gap: 1rem;
+        }
+
+        @media (max-width: 768px) {
+          .form-row {
+            grid-template-columns: 1fr;
+          }
         }
 
         /* Grid de Licitações */
@@ -1591,18 +2954,19 @@ const MrRepresentacoes = () => {
         }
 
         .bidding-actions {
-          display: flex;
-          gap: 0.75rem;
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 0.5rem;
         }
 
         .bidding-btn {
           display: flex;
           align-items: center;
-          gap: 0.5rem;
-          padding: 0.5rem 1rem;
+          gap: 0.25rem;
+          padding: 0.4rem 0.6rem;
           border-radius: 8px;
           font-weight: 600;
-          font-size: 0.8rem;
+          font-size: 0.75rem;
           border: none;
           cursor: pointer;
           transition: all 0.3s ease;
@@ -1631,6 +2995,30 @@ const MrRepresentacoes = () => {
           background: rgba(255, 255, 255, 0.95);
           transform: translateY(-2px);
           box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .bidding-btn.warning {
+          background: rgba(245, 158, 11, 0.8);
+          color: white;
+          border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .bidding-btn.warning:hover {
+          background: rgba(245, 158, 11, 0.95);
+          transform: translateY(-2px);
+          box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
+        }
+
+        .bidding-btn.danger {
+          background: rgba(239, 68, 68, 0.8);
+          color: white;
+          border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .bidding-btn.danger:hover {
+          background: rgba(239, 68, 68, 0.95);
+          transform: translateY(-2px);
+          box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
         }
 
         /* Empty State para Licitações */
@@ -1864,9 +3252,11 @@ const MrRepresentacoes = () => {
         }
 
         .modal-subtitle {
-          color: #64748b;
+          color: #475569;
           font-size: 1rem;
           margin: 0;
+          font-weight: 500;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
         }
 
         .close-btn {
@@ -1975,9 +3365,12 @@ const MrRepresentacoes = () => {
         }
 
         .detail-section {
-          background: rgba(248, 250, 252, 0.6);
+          background: rgba(255, 255, 255, 0.95);
+          border: 1px solid rgba(229, 231, 235, 0.5);
           border-radius: 12px;
           padding: 1.5rem;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+          backdrop-filter: blur(10px);
         }
 
         .detail-title {
@@ -1988,6 +3381,9 @@ const MrRepresentacoes = () => {
           display: flex;
           align-items: center;
           gap: 0.5rem;
+          padding: 0.5rem 0;
+          border-bottom: 2px solid rgba(229, 231, 235, 0.8);
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
         }
 
         /* Timeline */
@@ -2056,6 +3452,15 @@ const MrRepresentacoes = () => {
           color: #3b82f6;
         }
 
+        .timeline-content {
+          background: rgba(255, 255, 255, 0.8);
+          padding: 0.75rem;
+          border-radius: 6px;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+          backdrop-filter: blur(5px);
+          border: 1px solid rgba(229, 231, 235, 0.5);
+        }
+
         /* Grid de Documentos */
         .documents-grid {
           display: grid;
@@ -2103,6 +3508,13 @@ const MrRepresentacoes = () => {
           color: #1e293b;
         }
 
+        .document-description {
+          font-size: 0.8rem;
+          color: #64748b;
+          margin: 0.5rem 0;
+          line-height: 1.4;
+        }
+
         .document-status {
           display: flex;
           align-items: center;
@@ -2147,10 +3559,12 @@ const MrRepresentacoes = () => {
 
         .info-item {
           padding: 0.75rem;
-          background: white;
+          background: rgba(255, 255, 255, 0.95);
           border-radius: 8px;
           border: 1px solid #e2e8f0;
           font-size: 0.875rem;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+          backdrop-filter: blur(8px);
         }
 
         .info-item strong {
@@ -2398,6 +3812,283 @@ const MrRepresentacoes = () => {
           .btn-cancel {
             display: none;
           }
+        }
+
+        /* Loading e Error States */
+        .loading-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(255, 255, 255, 0.9);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+        }
+
+        .loading-spinner {
+          width: 40px;
+          height: 40px;
+          border: 4px solid #f3f4f6;
+          border-top: 4px solid #3b82f6;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+          margin-bottom: 16px;
+        }
+
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+
+        .error-banner {
+          background: #fef2f2;
+          border: 1px solid #fecaca;
+          color: #dc2626;
+          padding: 12px 16px;
+          border-radius: 8px;
+          margin-bottom: 20px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        /* Estilo para botão de sucesso */
+        .bidding-btn.success {
+          background: #10b981;
+          color: white;
+        }
+
+        .bidding-btn.success:hover {
+          background: #059669;
+        }
+
+        /* Estilos para o histórico de licitações */
+        .history-tabs {
+          display: flex;
+          gap: 8px;
+          margin-bottom: 16px;
+          border-bottom: 1px solid #f3f4f6;
+        }
+
+        .tab-btn {
+          padding: 8px 12px;
+          border: none;
+          background: none;
+          color: #6b7280;
+          cursor: pointer;
+          border-bottom: 2px solid transparent;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-weight: 500;
+          font-size: 13px;
+          transition: all 0.2s ease;
+        }
+
+        .tab-btn.active {
+          color: #1f2937;
+          border-bottom-color: #3b82f6;
+        }
+
+        .tab-btn:hover {
+          color: #1f2937;
+          background: #f9fafb;
+        }
+
+        .history-content {
+          min-height: 150px;
+          max-height: 300px;
+          overflow-y: auto;
+        }
+
+        .history-list {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .history-item {
+          display: flex;
+          align-items: center;
+          padding: 12px;
+          border-radius: 6px;
+          border: 1px solid #e5e7eb;
+          background: white;
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
+          font-size: 13px;
+        }
+
+        .history-item:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .history-item.won {
+          border-left: 3px solid #10b981;
+        }
+
+        .history-item.lost {
+          border-left: 3px solid #ef4444;
+        }
+
+        .history-info {
+          flex: 1;
+        }
+
+        .history-number {
+          font-size: 13px;
+          font-weight: 600;
+          color: #1f2937;
+          margin: 0 0 2px 0;
+        }
+
+        .history-title {
+          font-size: 11px;
+          color: #4b5563;
+          margin: 0 0 1px 0;
+          line-height: 1.3;
+        }
+
+        .history-client {
+          font-size: 10px;
+          color: #6b7280;
+          margin: 0;
+        }
+
+        .history-details {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+          gap: 2px;
+        }
+
+        .history-value {
+          font-weight: 600;
+          color: #1f2937;
+          font-size: 12px;
+        }
+
+        .history-date {
+          font-size: 10px;
+          color: #6b7280;
+        }
+
+        .history-view-btn {
+          padding: 6px;
+          border: none;
+          background: #f3f4f6;
+          color: #6b7280;
+          border-radius: 4px;
+          cursor: pointer;
+          margin-left: 8px;
+          transition: all 0.2s ease;
+        }
+
+        .history-view-btn:hover {
+          background: #3b82f6;
+          color: white;
+        }
+
+        .empty-history {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          padding: 30px 15px;
+          color: #6b7280;
+          text-align: center;
+        }
+
+        .empty-history svg {
+          margin-bottom: 8px;
+          opacity: 0.5;
+        }
+
+        .empty-history p {
+          font-size: 12px;
+          margin: 0;
+        }
+
+        /* Modal de histórico */
+        .bidding-history-modal {
+          max-width: 700px;
+          max-height: 80vh;
+          overflow-y: auto;
+          background: rgba(255, 255, 255, 0.98) !important;
+          backdrop-filter: blur(20px);
+          border: 1px solid rgba(255, 255, 255, 0.8);
+          box-shadow: 0 25px 60px rgba(0, 0, 0, 0.15);
+        }
+
+        .bidding-history-content {
+          background: rgba(255, 255, 255, 0.5);
+          border-radius: 8px;
+          padding: 1rem;
+          backdrop-filter: blur(5px);
+        }
+
+        .status-badge-large {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 16px 20px;
+          border-radius: 8px;
+          font-weight: 600;
+          font-size: 16px;
+          margin-bottom: 24px;
+        }
+
+        .status-badge-large.won {
+          background: rgba(209, 250, 229, 0.95);
+          color: #065f46;
+          border: 1px solid #10b981;
+          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+          backdrop-filter: blur(10px);
+        }
+
+        .status-badge-large.lost {
+          background: rgba(254, 226, 226, 0.95);
+          color: #991b1b;
+          border: 1px solid #ef4444;
+          box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);
+          backdrop-filter: blur(10px);
+        }
+
+        .documents-grid-readonly {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: 12px;
+        }
+
+        .document-item-readonly {
+          padding: 12px;
+          border-radius: 6px;
+          border: 1px solid #e5e7eb;
+          background: rgba(255, 255, 255, 0.95);
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+          backdrop-filter: blur(5px);
+        }
+
+        .document-item-readonly.enviado {
+          border-color: #10b981;
+          background: #ecfdf5;
+        }
+
+        .document-item-readonly.pendente {
+          border-color: #f59e0b;
+          background: #fffbeb;
+        }
+
+        .document-item-readonly.rascunho {
+          border-color: #6b7280;
+          background: #f3f4f6;
+        }
+
+        .info-item.full-width {
+          grid-column: 1 / -1;
         }
       `}</style>
     </div>

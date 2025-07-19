@@ -265,6 +265,113 @@ service cloud.firestore {
       allow read, write: if hasAdminPrivileges() || isMrResponsible();
     }
 
+    // === NOVAS REGRAS PARA MR REPRESENTAÇÕES ===
+
+    // Coleção de Tarefas Delegadas pelo Representante
+    match /mr_delegated_tasks/{taskId} {
+      allow read: if hasAdminPrivileges() || isMrResponsible();
+      allow create: if hasAdminPrivileges() || isMrResponsible();
+      allow update: if isSuperAdmin() || (isMrResponsible() && resource.data.completed == false);
+      allow delete: if isSuperAdmin();
+    }
+
+    // Coleção de Problemas Reportados nas Tarefas
+    match /mr_task_problems/{problemId} {
+      allow read: if hasAdminPrivileges() || isMrResponsible();
+      allow create: if hasAdminPrivileges() || isMrResponsible();
+      allow update, delete: if isSuperAdmin();
+    }
+
+    // Coleção de Histórico Semanal de Tarefas
+    match /mr_weekly_history/{historyId} {
+      allow read: if hasAdminPrivileges() || isMrResponsible();
+      allow create, update: if hasAdminPrivileges() || isMrResponsible();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Coleção de Licitações Detalhadas (Sistema Completo)
+    match /mr_biddings/{biddingId} {
+      allow read: if hasAdminPrivileges() || isMrResponsible();
+      allow create, update: if hasAdminPrivileges() || isMrResponsible();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Coleção de Documentos das Licitações
+    match /mr_bidding_documents/{documentId} {
+      allow read: if hasAdminPrivileges() || isMrResponsible();
+      allow create, update: if hasAdminPrivileges() || isMrResponsible();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Coleção de Timeline das Licitações
+    match /mr_bidding_timeline/{timelineId} {
+      allow read: if hasAdminPrivileges() || isMrResponsible();
+      allow create, update: if hasAdminPrivileges() || isMrResponsible();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Coleção de Licitações Ganhas
+    match /mr_won_biddings/{biddingId} {
+      allow read: if hasAdminPrivileges() || isMrResponsible();
+      allow create, update: if hasAdminPrivileges() || isMrResponsible();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Coleção de Licitações Perdidas
+    match /mr_lost_biddings/{biddingId} {
+      allow read: if hasAdminPrivileges() || isMrResponsible();
+      allow create, update: if hasAdminPrivileges() || isMrResponsible();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Coleção de Propostas e Solicitações
+    match /mr_proposals/{proposalId} {
+      allow read: if hasAdminPrivileges() || isMrResponsible();
+      allow create, update: if hasAdminPrivileges() || isMrResponsible();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Coleção de Tarefas de Rotina
+    match /mr_routine_tasks/{taskId} {
+      allow read: if hasAdminPrivileges() || isMrResponsible();
+      allow create, update: if hasAdminPrivileges() || isMrResponsible();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Coleção de Configurações de Notificação
+    match /mr_notification_settings/{userId} {
+      allow read, update: if hasAdminPrivileges() || (isMrResponsible() && isOwner(userId));
+      allow create: if hasAdminPrivileges() || isMrResponsible();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Coleção de Representadas (Empresas)
+    match /mr_representadas/{representadaId} {
+      allow read: if hasAdminPrivileges() || isMrResponsible();
+      allow create, update, delete: if isSuperAdmin();
+    }
+
+    // Coleção de Tipos de Ação
+    match /mr_action_types/{actionId} {
+      allow read: if hasAdminPrivileges() || isMrResponsible();
+      allow create, update, delete: if isSuperAdmin();
+    }
+
+    // Coleção de Estatísticas e Métricas
+    match /mr_statistics/{statId} {
+      allow read: if hasAdminPrivileges() || isMrResponsible();
+      allow create, update: if hasAdminPrivileges() || isMrResponsible();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Coleção de Configurações do Sistema MR
+    match /mr_system_config/{configId} {
+      allow read: if hasAdminPrivileges() || isMrResponsible();
+      allow create, update, delete: if isSuperAdmin();
+    }
+
+    // === FIM DAS REGRAS MR REPRESENTAÇÕES ===
+
     // Coleção de Chats com IA
     match /ai_chats/{chatId} {
       allow read, write: if hasAdminPrivileges() || resource.data.userId == request.auth.uid;
